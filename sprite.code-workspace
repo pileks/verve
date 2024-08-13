@@ -1,0 +1,17 @@
+{
+  "settings": {
+    "terminal.integrated.cwd": "./",
+    "files.associations": {
+      "*.css": "tailwindcss"
+    }
+  },
+  "folders": [
+    {
+      "name": "root",
+      "path": "."
+    },
+    {
+      "path": "./frontend"
+    }
+  ]
+}
