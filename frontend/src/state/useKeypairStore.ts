@@ -1,17 +1,16 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import anchor from "@coral-xyz/anchor";
 
 type Keystore = {
-  keypair: anchor.web3.Ed25519Keypair | undefined;
-  assign: (kp: anchor.web3.Ed25519Keypair) => void;
+  secretKey: string | undefined;
+  assign: (key: string) => void;
 };
 
 export const useKeypairStore = create<Keystore>()(
   persist(
     (set) => ({
-      keypair: undefined,
-      assign: (kp) => set(() => ({ keypair: kp })),
+      secretKey: undefined,
+      assign: (key) => set(() => ({ secretKey: key })),
     }),
     {
       name: "sprite-keypair-storage",
