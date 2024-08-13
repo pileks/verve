@@ -15,7 +15,15 @@ function App() {
 
   return (
     <>
-      <div>{kp ? <>{kp.publicKey.toBase58()}</> : <>No Keypair!</>}</div>
+      <div>
+        {kp ? (
+          <>
+            <div>Pubkey: {kp.publicKey.toBase58()}</div>
+          </>
+        ) : (
+          <>No Keypair!</>
+        )}
+      </div>
       <div>
         <button
           onClick={() => {
