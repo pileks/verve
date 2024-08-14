@@ -61,6 +61,7 @@ function Home() {
         </div>
         <div>
           <button
+            className="border border-black rounded px-3 py-2"
             onClick={() => {
               generateKeypair();
             }}
@@ -71,6 +72,7 @@ function Home() {
         <div>
           {window.opener ? (
             <button
+              className="border border-black rounded px-3 py-2"
               onClick={() => {
                 sendKeypair();
               }}
