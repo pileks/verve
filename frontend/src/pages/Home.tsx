@@ -31,6 +31,7 @@ function Home() {
       type: "secretkey",
     };
     opener.postMessage(resp, import.meta.env.VITE_WALLET_URL);
+    window.close();
   };
 
   return (
