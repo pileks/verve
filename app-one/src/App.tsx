@@ -43,7 +43,7 @@ function App() {
 
         setTxString(JSON.stringify(tx));
       } else if (e.data.type === "pubkey") {
-        console.log("Received pubkey!");
+        console.log("Received pubkey:");
 
         const data = e.data as PubkeyResponse;
 
@@ -94,7 +94,6 @@ function App() {
       import.meta.env.VITE_WALLET_URL,
       [message.buffer]
     );
-    console.log("sent message");
   }, [pubkey]);
 
   return (

@@ -7,14 +7,26 @@ import {
   PubkeyResponse,
 } from "../types/messages";
 import { useKeypairStore } from "../state/useKeypairStore";
+import { useEffect, useRef, useState } from "react";
 
 function Embed() {
   const { secretKey, assign } = useKeypairStore();
 
-  const kp = secretKey
-    ? web3.Keypair.fromSecretKey(base64.decode(secretKey))
-    : undefined;
+  const kp = useRef<web3.Keypair | undefined>(
+    secretKey ? web3.Keypair.fromSecretKey(base64.decode(secretKey)) : undefined
+  );
 
+  const [pubkey, setPubkey] = useState<string | undefined>(kp.current?.publicKey.toBase58());
+
+  useEffect(() => {
+    kp.current = secretKey
+      ? web3.Keypair.fromSecretKey(base64.decode(secretKey))
+      : undefined;
+    
+    setPubkey(kp.current?.publicKey.toBase58());
+  }, [secretKey]);
+
+  
   const fetchKeypair = () => {
     window.open(import.meta.env.VITE_WALLET_URL, "_blank");
 
@@ -33,7 +45,7 @@ function Embed() {
             ).publicKey;
 
             console.log("Sending pubkey to parent.");
-            
+
             const message: PubkeyResponse = {
               type: "pubkey",
               pubkey: pubkey.toBase58(),
@@ -50,7 +62,7 @@ function Embed() {
         if (e.data.type == "transactionRequest") {
           console.log("TX received!");
 
-          if (!kp) {
+          if (!kp.current) {
             console.log("No keypair present, can't sign transaction!");
             return;
           }
@@ -58,7 +70,7 @@ function Embed() {
           const data = e.data as TransactionRequest;
 
           const tx = web3.Transaction.from(Buffer.from(data.buffer));
-          tx.partialSign(kp);
+          tx.partialSign(kp.current);
 
           const signedTxData = tx.serialize({
             requireAllSignatures: false,
@@ -78,10 +90,11 @@ function Embed() {
 
   return (
     <div className="p-4 flex flex-col gap-4">
-      {kp ? (
+      {pubkey ? (
         <>
           <div className="font-medium">
-            Pubkey: <span className="font-mono">{kp.publicKey.toBase58()}</span>
+            Pubkey:{" "}
+            <span className="font-mono">{pubkey}</span>
           </div>
         </>
       ) : (
