@@ -71,7 +71,7 @@ function App() {
       web3.SystemProgram.transfer({
         fromPubkey: walletPubkey,
         toPubkey: payerPubkey,
-        lamports: 10000,
+        lamports: 1000000,
       })
     );
 
