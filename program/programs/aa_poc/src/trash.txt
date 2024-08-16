@@ -1,0 +1,89 @@
+
+    pub fn execute_transaction(
+        ctx: Context<ExecuteTransaction>,
+        instruction_data: Vec<u8>,
+    ) -> Result<()> {
+        let serialized_transaction: SerializedTransaction =
+            SerializedTransaction::try_from_slice(&instruction_data)
+                .map_err(|_| error!(ErrorCode::DeserializationFailed))?;
+
+        for serialized_instruction in serialized_transaction.instructions {
+            let instruction = Instruction {
+                program_id: serialized_instruction.program_id,
+                accounts: deserialize_accounts(&serialized_instruction.accounts),
+                data: serialized_instruction.data,
+            };
+
+            let account_infos = instruction
+                .accounts
+                .iter()
+                .map(|meta| {
+                    ctx.remaining_accounts
+                        .iter()
+                        .find(|&i| i.key.eq(&meta.pubkey))
+                        .cloned()
+                        .ok_or_else(|| error!(ErrorCode::AccountNotFound))
+                })
+                .collect::<Result<Vec<_>>>()?;
+
+            anchor_lang::solana_program::program::invoke(&instruction, &account_infos)?;
+        }
+
+        Ok(())
+    }
+
+
+    
+#[derive(BorshDeserialize, BorshSerialize)]
+struct SerializedTransaction {
+    instructions: Vec<SerializedInstruction>,
+}
+
+#[derive(BorshDeserialize, BorshSerialize)]
+struct SerializedInstruction {
+    program_id: Pubkey,
+    accounts: Vec<u8>,
+    data: Vec<u8>,
+}
+
+fn deserialize_accounts(data: &[u8]) -> Vec<AccountMeta> {
+    let mut offset = 0;
+    let mut accounts = Vec::new();
+
+    while offset < data.len() {
+        let pubkey = read_pubkey(data, &mut offset);
+        let is_signer = read_bool(data, &mut offset);
+        let is_writable = read_bool(data, &mut offset);
+
+        accounts.push(AccountMeta {
+            pubkey,
+            is_signer,
+            is_writable,
+        });
+    }
+
+    accounts
+}
+
+fn read_bool(bytes: &[u8], offset: &mut usize) -> bool {
+    let value = bytes[*offset] != 0;
+    *offset += 1;
+    value
+}
+
+fn read_pubkey(bytes: &[u8], offset: &mut usize) -> Pubkey {
+    let pubkey_bytes: [u8; 32] = bytes[*offset..*offset + 32]
+        .try_into()
+        .expect("Failed to read Pubkey");
+    *offset += 32;
+    Pubkey::new_from_array(pubkey_bytes)
+}
+
+#[error_code]
+pub enum ErrorCode {
+    #[msg("Account not found")]
+    AccountNotFound,
+    #[msg("Failed to deserialize transaction data")]
+    DeserializationFailed,
+    // Define other errors here
+}
