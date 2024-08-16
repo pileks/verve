@@ -65,19 +65,18 @@ function App() {
       return;
     }
     const walletPubkey = new web3.PublicKey(pubkey);
+    const payerPubkey = new web3.PublicKey("ENqWp6zvrKX59YiJbRfPtPYCs42xXiJ9e8nV6KsUcppo");
 
-    const payer = new web3.Keypair();
     const tx = new web3.Transaction().add(
       web3.SystemProgram.transfer({
         fromPubkey: walletPubkey,
-        toPubkey: payer.publicKey,
+        toPubkey: payerPubkey,
         lamports: 10000,
       })
     );
 
     tx.recentBlockhash = "G2ox6KrQ68a1tXd6gYSst47hsctgDcDofrAWwV7rzGz8";
-    tx.feePayer = payer.publicKey;
-    tx.partialSign(payer);
+    tx.feePayer = payerPubkey;
 
     const serializedTx = tx.serialize({
       requireAllSignatures: false,

@@ -2,6 +2,7 @@
 
 interface ImportMetaEnv {
   readonly VITE_WALLET_URL: string;
+  readonly VITE_PAYER_URL: string;
   // more env variables...
 }
 

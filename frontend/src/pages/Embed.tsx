@@ -1,5 +1,5 @@
 import { web3 } from "@coral-xyz/anchor";
-import { base64 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
+import { base64, bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
 import {
   TransactionRequest,
   TransactionResponse,
@@ -11,7 +11,7 @@ import { useEffect, useRef, useState } from "react";
 
 function Embed() {
   const { secretKey, assign } = useKeypairStore();
-
+  
   const kp = useRef<web3.Keypair | undefined>(
     secretKey ? web3.Keypair.fromSecretKey(base64.decode(secretKey)) : undefined
   );
@@ -70,6 +70,7 @@ function Embed() {
           const data = e.data as TransactionRequest;
 
           const tx = web3.Transaction.from(Buffer.from(data.buffer));
+          
           tx.partialSign(kp.current);
 
           const signedTxData = tx.serialize({
@@ -77,12 +78,27 @@ function Embed() {
             verifySignatures: false,
           });
 
-          const msg: TransactionResponse = {
-            type: "transactionResponse",
-            buffer: signedTxData.buffer,
-          };
+          fetch(`${import.meta.env.VITE_PAYER_URL}`, {
+            method: "POST",
+            body: JSON.stringify({ tx: bs58.encode(signedTxData)}),
+            headers: {
+              "content-type": "application/json"
+            }
+          }).then(resp => {
 
-          window.parent.postMessage(msg, "*", [msg.buffer]);
+            resp.json().then(x => {
+              const respTx = (x.tx as string);
+              const respTxData = Uint8Array.from(bs58.decode(respTx)).buffer;
+
+              const msg: TransactionResponse = {
+                type: "transactionResponse",
+                buffer: respTxData,
+              };
+    
+              window.parent.postMessage(msg, "*", [respTxData]);
+            })
+
+          })
         }
       }
     });
