@@ -105,6 +105,11 @@ describe("aa_poc", () => {
     console.log(result.meta.logMessages);
   });
 
+  it("Init wallet", async() => {
+    const initTx = await program.methods.initWallet().transaction();
+    await sendWithPayer(initTx, sponsor);
+  });
+
   it.skip("AA Demo", async () => {
     const hotwallet = new Keypair();
 
