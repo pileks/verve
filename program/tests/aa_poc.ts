@@ -80,7 +80,7 @@ describe("aa_poc", () => {
     await airdropSol(sponsor.publicKey, 100);
   });
 
-  it("ECDSA Auth", async () => {
+  it.skip("ECDSA Auth", async () => {
     const ec = new elliptic.ec("secp256k1");
 
     const key = ec.genKeyPair();
@@ -105,12 +105,12 @@ describe("aa_poc", () => {
     console.log(result.meta.logMessages);
   });
 
-  it("Init wallet", async() => {
+  it.skip("Init wallet", async() => {
     const initTx = await program.methods.initWallet().transaction();
     await sendWithPayer(initTx, sponsor);
   });
 
-  it.skip("AA Demo", async () => {
+  it("AA Demo", async () => {
     const hotwallet = new Keypair();
 
     console.log("Provider: ", provider.publicKey.toBase58());

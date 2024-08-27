@@ -5,12 +5,14 @@ use anchor_lang::prelude::*;
 declare_id!("7UD7pBcVkw2yJQzdm9eNTfeSC8uo2WhM6MdUzBXK48zv");
 
 const PDA_WALLET_SEED: &[u8; 6] = b"wallet";
+const PDA_HOTKEY_SEED: &[u8; 6] = b"hotkey";
 
 const CHALLENGE: &[u8] = b"Hello!";
 #[program]
 pub mod aa_poc {
     use anchor_lang::solana_program::{
-        instruction::Instruction, secp256k1_recover::{secp256k1_recover, Secp256k1Pubkey},
+        instruction::Instruction,
+        secp256k1_recover::{secp256k1_recover, Secp256k1Pubkey},
     };
     use tiny_keccak::{Hasher, Sha3};
 
@@ -27,7 +29,9 @@ pub mod aa_poc {
     }
 
     pub fn register_keypair(ctx: Context<RegisterKeypair>) -> Result<()> {
-        ctx.accounts.wallet.controller = ctx.accounts.signer.key();
+        ctx.accounts.hotkey.wallet = ctx.accounts.wallet.key();
+        ctx.accounts.hotkey.controller = ctx.accounts.signer.key();
+
         msg!("New signer: {}", ctx.accounts.signer.key());
         Ok(())
     }
@@ -36,7 +40,7 @@ pub mod aa_poc {
         _ctx: Context<JwtTest>,
         signature_bytes: Vec<u8>,
         recovery_param: u8,
-        pubkey_bytes: Vec<u8>
+        pubkey_bytes: Vec<u8>,
     ) -> Result<()> {
         let mut sha3 = Sha3::v256();
         let mut output = [0u8; 32];
@@ -48,7 +52,10 @@ pub mod aa_poc {
         let actual_pubkey = secp256k1_recover(&output, recovery_param, &signature_bytes)
             .map_err(|_| AaError::InvalidSignature)?;
 
-        require!(expected_pubkey.eq(&actual_pubkey), AaError::InvalidSignature);
+        require!(
+            expected_pubkey.eq(&actual_pubkey),
+            AaError::InvalidSignature
+        );
 
         Ok(())
     }
@@ -65,7 +72,15 @@ pub mod aa_poc {
             ctx.accounts
                 .signer
                 .key()
-                .eq(&ctx.accounts.wallet.controller.key()),
+                .eq(&ctx.accounts.hotkey.controller.key()),
+            AaError::ControllerMismatch
+        );
+
+        require!(
+            ctx.accounts
+                .wallet
+                .key()
+                .eq(&ctx.accounts.hotkey.wallet.key()),
             AaError::ControllerMismatch
         );
 
@@ -121,8 +136,22 @@ pub struct RegisterKeypair<'info> {
     )]
     pub wallet: Account<'info, Wallet>,
 
+    #[account(
+        init,
+        payer=payer,
+        space=std::mem::size_of::<Hotkey>() + 8,
+        seeds=[PDA_HOTKEY_SEED, signer.key().as_ref()],
+        bump
+    )]
+    pub hotkey: Account<'info, Hotkey>,
+
     #[account(mut)]
     pub signer: Signer<'info>,
+
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
@@ -133,6 +162,12 @@ pub struct ExecInstruction<'info> {
         bump
     )]
     pub wallet: Account<'info, Wallet>,
+
+    #[account(
+        seeds=[PDA_HOTKEY_SEED, signer.key().as_ref()],
+        bump
+    )]
+    pub hotkey: Account<'info, Hotkey>,
 
     #[account()]
     pub signer: Signer<'info>,
@@ -164,7 +199,11 @@ pub struct InitWallet<'info> {
 }
 
 #[account]
-pub struct Wallet {
+pub struct Wallet {}
+
+#[account]
+pub struct Hotkey {
+    pub wallet: Pubkey,
     pub controller: Pubkey,
 }
 
