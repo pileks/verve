@@ -69,7 +69,8 @@ pub mod aa_poc {
             AaError::ControllerMismatch
         );
 
-        msg!("Executing tx for address: {}", ctx.accounts.signer.key());
+        msg!("Executing tx for AA wallet: {}", ctx.accounts.wallet.key());
+        msg!("Tx approved by: {}", ctx.accounts.signer.key());
 
         let instruction = Instruction {
             accounts: [].to_vec(),
