@@ -1,10 +1,18 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import App from './App.tsx'
-import './index.css'
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import App from "./App.tsx";
+import "./index.css";
+import { ConnectionProvider } from "@solana/wallet-adapter-react";
+import { AaPocProgramProvider } from "./providers/AaPocProgramProvider.tsx";
 
-createRoot(document.getElementById('root')!).render(
+const endpoint = "http://localhost:8899";
+
+createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
-  </StrictMode>,
-)
+    <ConnectionProvider endpoint={endpoint}>
+      <AaPocProgramProvider>
+        <App />
+      </AaPocProgramProvider>
+    </ConnectionProvider>
+  </StrictMode>
+);

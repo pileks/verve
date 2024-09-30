@@ -1,5 +1,7 @@
 import { web3 } from "@coral-xyz/anchor";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useAaPocProgramContext } from "./providers/AaPocProgramContext";
+import { useConnection } from "@solana/wallet-adapter-react";
 
 type TransactionResponse = {
   type: "transactionResponse";
@@ -22,6 +24,13 @@ function App() {
   const embeddedWalletRef = useRef<HTMLIFrameElement>(null);
   const [pubkey, setPubkey] = useState("");
   const [txString, setTxString] = useState("");
+  const [txResultString, setTxResultString] = useState("");
+  const aaPoc = useAaPocProgramContext();
+  const { connection } = useConnection();
+
+  useEffect(() => {
+    console.log(aaPoc);
+  }, [aaPoc]);
 
   useEffect(() => {
     if (isListening.current) {
@@ -31,17 +40,42 @@ function App() {
 
     isListening.current = true;
 
-    window.addEventListener("message", (e) => {
+    window.addEventListener("message", async (e) => {
       if (e.data.type === "transactionResponse") {
         console.log("Received signed TX response!");
 
         const data = e.data as TransactionResponse;
 
         const tx = web3.Transaction.from(Buffer.from(data.buffer));
-
         console.log(tx);
-
         setTxString(JSON.stringify(tx));
+
+        const txSig = await connection.sendRawTransaction(tx.serialize());
+
+        const confirmTransaction = async (tx: string) => {
+          const bh = await connection.getLatestBlockhash();
+
+          await connection.confirmTransaction(
+            {
+              signature: tx,
+              blockhash: bh.blockhash,
+              lastValidBlockHeight: bh.lastValidBlockHeight,
+            },
+            "confirmed"
+          );
+
+          const txDetails = await connection.getTransaction(tx, {
+            commitment: "confirmed",
+            maxSupportedTransactionVersion: 0,
+          });
+      
+          return txDetails;
+        };
+
+        const txResult = await confirmTransaction(txSig);
+
+        console.log(txResult);
+        setTxResultString(txResult?.meta?.logMessages?.join("\n") ?? "No logs!");
       } else if (e.data.type === "pubkey") {
         console.log("Received pubkey:");
 
@@ -54,7 +88,7 @@ function App() {
     });
   }, []);
 
-  const sendTx = useCallback(() => {
+  const sendTx = useCallback(async () => {
     if (!embeddedWalletRef.current?.contentWindow) {
       console.log("Could not find embedded wallet iframe!");
       return;
@@ -65,17 +99,26 @@ function App() {
       return;
     }
     const walletPubkey = new web3.PublicKey(pubkey);
-    const payerPubkey = new web3.PublicKey("ENqWp6zvrKX59YiJbRfPtPYCs42xXiJ9e8nV6KsUcppo");
-
-    const tx = new web3.Transaction().add(
-      web3.SystemProgram.transfer({
-        fromPubkey: walletPubkey,
-        toPubkey: payerPubkey,
-        lamports: 1000000,
-      })
+    const payerPubkey = new web3.PublicKey(
+      "ENqWp6zvrKX59YiJbRfPtPYCs42xXiJ9e8nV6KsUcppo"
     );
 
-    tx.recentBlockhash = "G2ox6KrQ68a1tXd6gYSst47hsctgDcDofrAWwV7rzGz8";
+    if (!aaPoc) {
+      console.log("Cannot find program.");
+      return;
+    }
+
+    const ix = await aaPoc.methods.testTransaction().instruction();
+
+    const tx = await aaPoc.methods
+      .execInstruction(ix.data)
+      .accounts({ payer: payerPubkey, signer: walletPubkey })
+      .remainingAccounts([
+        { isSigner: false, isWritable: false, pubkey: aaPoc.programId },
+      ])
+      .transaction();
+
+    tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
     tx.feePayer = payerPubkey;
 
     const serializedTx = tx.serialize({
@@ -113,9 +156,22 @@ function App() {
           </div>
           <div>
             {!!txString.length && (
-              <p className="p-4 border border-black rounded font-mono text-wrap whitespace-pre-wrap overflow-x-auto">
-                {txString}
-              </p>
+              <>
+                <p className="font-semibold">Tx:</p>
+                <p className="p-4 border border-black rounded font-mono text-wrap whitespace-pre-wrap overflow-x-auto">
+                  {txString}
+                </p>
+              </>
+            )}
+          </div>
+          <div>
+          {!!txResultString.length && (
+              <>
+                <p className="font-semibold">Tx result:</p>
+                <p className="p-4 border border-black rounded font-mono text-wrap whitespace-pre-wrap overflow-x-auto">
+                  {txResultString}
+                </p>
+              </>
             )}
           </div>
         </div>

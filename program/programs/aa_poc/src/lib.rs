@@ -28,7 +28,7 @@ pub mod aa_poc {
 
     pub fn register_keypair(ctx: Context<RegisterKeypair>) -> Result<()> {
         ctx.accounts.wallet.controller = ctx.accounts.signer.key();
-
+        msg!("New signer: {}", ctx.accounts.signer.key());
         Ok(())
     }
 
@@ -68,6 +68,9 @@ pub mod aa_poc {
                 .eq(&ctx.accounts.wallet.controller.key()),
             AaError::ControllerMismatch
         );
+
+        msg!("Executing tx for AA wallet: {}", ctx.accounts.wallet.key());
+        msg!("Tx approved by: {}", ctx.accounts.signer.key());
 
         let instruction = Instruction {
             accounts: [].to_vec(),

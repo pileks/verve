@@ -1,17 +1,91 @@
 import { web3 } from "@coral-xyz/anchor";
 import { useKeypairStore } from "../state/useKeypairStore";
-import { base64 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
+import { base64, bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
 import { WalletResponse } from "../types/messages";
+import { useAaPocProgramContext } from "../providers/AaPocProgramContext";
+import { useConnection } from "@solana/wallet-adapter-react";
 
 function Home() {
   const { secretKey, assign } = useKeypairStore();
+
+  const aaPoc = useAaPocProgramContext();
+  const { connection } = useConnection();
 
   const kp = secretKey
     ? web3.Keypair.fromSecretKey(base64.decode(secretKey))
     : undefined;
 
-  const generateKeypair = () => {
-    assign(base64.encode(Buffer.from(new web3.Keypair().secretKey)));
+  const generateKeypair = async () => {
+    if (!aaPoc) {
+      console.log("Can't connect to program!");
+      return;
+    }
+
+    const keypair = new web3.Keypair();
+
+    const registrationTx = await aaPoc.methods
+      .registerKeypair()
+      .accounts({ signer: keypair.publicKey })
+      .transaction();
+
+    const payerPubkey = new web3.PublicKey(
+      "ENqWp6zvrKX59YiJbRfPtPYCs42xXiJ9e8nV6KsUcppo"
+    );
+    
+    registrationTx.feePayer = payerPubkey;
+    registrationTx.recentBlockhash = (
+      await connection.getLatestBlockhash()
+    ).blockhash;
+
+    registrationTx.partialSign(keypair);
+
+    const registrationTxSerialized = registrationTx.serialize({
+      requireAllSignatures: false,
+      verifySignatures: false,
+    });
+
+    const registrationTxSignedResponse = await fetch(
+      import.meta.env.VITE_PAYER_URL,
+      {
+        method: "POST",
+        body: JSON.stringify({ tx: bs58.encode(registrationTxSerialized) }),
+        headers: {
+          "content-type": "application/json",
+        },
+      }
+    );
+
+    const registrationTxSignedJson = await registrationTxSignedResponse.json();
+
+    const registrationTxSignedData = bs58.decode(registrationTxSignedJson.tx);
+
+    const txSig = await connection.sendRawTransaction(registrationTxSignedData);
+
+    const confirmTransaction = async (tx: string) => {
+      const bh = await connection.getLatestBlockhash();
+    
+      await connection.confirmTransaction(
+        {
+          signature: tx,
+          blockhash: bh.blockhash,
+          lastValidBlockHeight: bh.lastValidBlockHeight,
+        },
+        "confirmed"
+      );
+
+      const txDetails = await connection.getTransaction(tx, {
+        commitment: "confirmed",
+        maxSupportedTransactionVersion: 0,
+      });
+  
+      return txDetails;
+    }
+
+    const txResult = await confirmTransaction(txSig);
+
+    console.log(txResult);
+
+    assign(base64.encode(Buffer.from(keypair.secretKey)));
   };
 
   const sendKeypair = () => {

@@ -1,0 +1,238 @@
+{
+  "address": "7UD7pBcVkw2yJQzdm9eNTfeSC8uo2WhM6MdUzBXK48zv",
+  "metadata": {
+    "name": "aa_poc",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "exec_instruction",
+      "discriminator": [
+        9,
+        136,
+        217,
+        19,
+        171,
+        251,
+        123,
+        62
+      ],
+      "accounts": [
+        {
+          "name": "wallet",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  97,
+                  108,
+                  108,
+                  101,
+                  116
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "signer",
+          "signer": true
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "instruction_data",
+          "type": "bytes"
+        }
+      ]
+    },
+    {
+      "name": "init_wallet",
+      "discriminator": [
+        141,
+        132,
+        233,
+        130,
+        168,
+        183,
+        10,
+        119
+      ],
+      "accounts": [
+        {
+          "name": "wallet",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  97,
+                  108,
+                  108,
+                  101,
+                  116
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "register_keypair",
+      "discriminator": [
+        205,
+        111,
+        146,
+        163,
+        150,
+        128,
+        19,
+        10
+      ],
+      "accounts": [
+        {
+          "name": "wallet",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  97,
+                  108,
+                  108,
+                  101,
+                  116
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "test_transaction",
+      "discriminator": [
+        80,
+        140,
+        3,
+        126,
+        171,
+        191,
+        2,
+        55
+      ],
+      "accounts": [],
+      "args": []
+    },
+    {
+      "name": "verify_ecdsa",
+      "discriminator": [
+        191,
+        18,
+        177,
+        253,
+        170,
+        211,
+        107,
+        155
+      ],
+      "accounts": [],
+      "args": [
+        {
+          "name": "signature_bytes",
+          "type": "bytes"
+        },
+        {
+          "name": "recovery_param",
+          "type": "u8"
+        },
+        {
+          "name": "pubkey_bytes",
+          "type": "bytes"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Wallet",
+      "discriminator": [
+        24,
+        89,
+        59,
+        139,
+        81,
+        154,
+        232,
+        95
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "ControllerMismatch",
+      "msg": "Controller mismatch"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidToken",
+      "msg": "Invalid token"
+    },
+    {
+      "code": 6002,
+      "name": "InvalidAlgorithm",
+      "msg": "Invalid algorithm"
+    },
+    {
+      "code": 6003,
+      "name": "InvalidSignature",
+      "msg": "Invalid signature"
+    }
+  ],
+  "types": [
+    {
+      "name": "Wallet",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "controller",
+            "type": "pubkey"
+          }
+        ]
+      }
+    }
+  ]
+}
