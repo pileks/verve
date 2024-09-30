@@ -17,8 +17,12 @@ ENV PATH="/.local/share/solana/install/releases/1.18/bin:${PATH}"
 RUN solana config set -u localhost
 
 COPY ./run.sh /run.sh
+COPY ./monitor.sh /monitor.sh
 
 RUN chmod +x /run.sh
+RUN chmod +x /monitor.sh
+
+RUN apt -y install fswatch
 
 # start a solana test validator but output logs to 
-CMD ["sh", "-c", "/run.sh"]
+CMD ["sh", "-c", "/monitor.sh"]
