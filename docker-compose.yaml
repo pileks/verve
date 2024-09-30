@@ -1,0 +1,12 @@
+name: verve
+services:
+  ledger:
+    image: alpine:latest
+    build:
+      context: ./ledger
+      dockerfile: Dockerfile
+    ports:
+      - 8899:8899
+      - 8900:8900
+    volumes:
+      - .data/ledger:/ledger
