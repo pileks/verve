@@ -1,6 +1,16 @@
 use std::mem::size_of;
 
 use anchor_lang::prelude::*;
+use borsh::{BorshDeserialize, BorshSerialize};
+
+use light_sdk::{
+    light_account, light_accounts,
+    merkle_context::{PackedAddressMerkleContext, PackedMerkleContext, PackedMerkleOutputContext},
+    utils::{create_cpi_inputs_for_account_deletion, create_cpi_inputs_for_new_account},
+    verify::verify,
+    LightTraits,
+};
+use light_system_program::{invoke::processor::CompressedProof, sdk::CompressedCpiContext};
 
 declare_id!("7UD7pBcVkw2yJQzdm9eNTfeSC8uo2WhM6MdUzBXK48zv");
 
@@ -31,10 +41,14 @@ pub mod aa_poc {
     pub fn register_keypair(ctx: Context<RegisterKeypair>) -> Result<()> {
         ctx.accounts.hotkey.wallet = ctx.accounts.wallet.key();
         ctx.accounts.hotkey.controller = ctx.accounts.signer.key();
-
+        
         msg!("New signer: {}", ctx.accounts.signer.key());
         Ok(())
     }
+
+    // pub fn register_keypair_compressed(ctx:) -> Result<()>{
+    //     Ok(())
+    // }
 
     pub fn verify_ecdsa(
         _ctx: Context<JwtTest>,
@@ -64,9 +78,6 @@ pub mod aa_poc {
         ctx: Context<ExecInstruction>,
         instruction_data: Vec<u8>,
     ) -> Result<()> {
-        // msg!("LEN {}", instruction_data.len());
-        // msg!("PAYER {}", ctx.accounts.payer.key());
-        // msg!("SIGNER {}", ctx.accounts.signer.key());
 
         require!(
             ctx.accounts
@@ -119,6 +130,19 @@ pub struct ExecuteTransaction<'info> {
 
     #[account(mut)]
     pub payer: Signer<'info>,
+}
+
+#[light_accounts]
+#[derive(Accounts, LightTraits)]
+pub struct CompressedHotkey<'info> {
+    #[account(mut)]
+    #[fee_payer]
+    pub signer: Signer<'info>,
+    #[self_program]
+    pub self_program: Program<'info, crate::program::AaPoc>,
+    /// CHECK: Checked in light-system-program.
+    #[authority]
+    pub cpi_signer: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]

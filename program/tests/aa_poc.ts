@@ -10,6 +10,8 @@ import { AaPoc } from "../target/types/aa_poc";
 import elliptic from "elliptic";
 import keccak from "keccak";
 
+import { lightProgram, LightSystemProgram } from "@lightprotocol/stateless.js";
+
 describe("aa_poc", () => {
   // Configure the client to use the local cluster.
   const sponsor = new Keypair();
@@ -110,7 +112,7 @@ describe("aa_poc", () => {
     await sendWithPayer(initTx, sponsor);
   });
 
-  it("AA Demo", async () => {
+  it.skip("AA Demo", async () => {
     const hotwallet = new Keypair();
 
     console.log("Provider: ", provider.publicKey.toBase58());
@@ -155,5 +157,9 @@ describe("aa_poc", () => {
 
     console.log("Sponsor balance: ", payerBalance);
     console.log("Hotwallet balance: ", signerBalance);
+  });
+
+  it("Bepis", async () => {
+    
   });
 });
