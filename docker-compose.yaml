@@ -10,3 +10,4 @@ services:
       - 8900:8900
     volumes:
       - .data/ledger:/ledger
+      - ./program/target/deploy:/ledger/program
