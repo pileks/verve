@@ -7,17 +7,20 @@
   },
   "folders": [
     {
-      "name": "root",
-      "path": "."
+      "path": "./program"
     },
     {
       "path": "./frontend"
     },
     {
-      "path": "./program"
+      "path": "./app-one"
     },
     {
-      "path": "./app-one"
+      "path": "./backend"
+    },
+    {
+      "name": "root",
+      "path": "."
     }
   ]
 }
