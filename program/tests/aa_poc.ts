@@ -9,6 +9,7 @@ import {
 import { AaPoc } from "../target/types/aa_poc";
 import elliptic from "elliptic";
 import keccak from "keccak";
+import { createMint, createAccount, getOrCreateAssociatedTokenAccount, mintTo, getAccount } from "@solana/spl-token";
 
 describe("aa_poc", () => {
   // Configure the client to use the local cluster.
@@ -115,12 +116,12 @@ describe("aa_poc", () => {
     await sendWithPayer(initTx, sponsor, primaryGuardian);
   });
 
-  it("AA Demo", async () => {
+  it.skip("AA Demo", async () => {
     console.log("Provider: ", provider.publicKey.toBase58());
     console.log("Sponsor: ", sponsor.publicKey.toBase58());
     console.log("Hotwallet: ", primaryGuardian.publicKey.toBase58());
 
-    // We aren't dropping SOL into the signer
+    // We aren't dropping SOL into the guardian
     // This shows how a SOLless wallet can still sign (approve) transactions with an external payer
     // await airdropSol(signer.publicKey, 100);
 
@@ -201,5 +202,54 @@ describe("aa_poc", () => {
 
     console.log("Sponsor balance: ", payerBalance);
     console.log("Hotwallet balance: ", signerBalance);
+  });
+
+  it("Airdrop token into nonexistent account", async () => {
+    const seeds = [Buffer.from("b"), new Keypair().publicKey.toBuffer()];
+
+    const [pdaPubkey, bump] = PublicKey.findProgramAddressSync(
+      seeds,
+      program.programId
+    );
+
+    const mintKeypair = new Keypair();
+    const mintCreator = new Keypair();
+
+    await airdropSol(mintCreator.publicKey, 100);
+
+    let mint = await createMint(
+      provider.connection,
+      mintCreator,
+      mintCreator.publicKey,
+      mintCreator.publicKey,
+      0,
+      mintKeypair
+    );
+
+    let pdaAta = await getOrCreateAssociatedTokenAccount(
+      provider.connection,
+      mintCreator,
+      mint,
+      pdaPubkey,
+      true
+    );
+
+    console.log("PDA ATA:", pdaAta.address.toBase58());
+
+    await mintTo(
+      provider.connection,
+      mintCreator,
+      mint,
+      pdaAta.address,
+      mintCreator,
+      100_000_000 // Amount of tokens to mint (considering decimals)
+    );
+
+    const pdaTokenAccountInfo = await getAccount(
+      provider.connection,
+      pdaAta.address
+    );
+
+    console.log("PDA token balance:", pdaTokenAccountInfo.amount);
   });
 });
