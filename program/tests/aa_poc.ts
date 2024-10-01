@@ -75,7 +75,7 @@ describe("aa_poc", () => {
     );
   };
 
-  const mainGuardian = new Keypair();
+  const primaryGuardian = new Keypair();
 
   before(async () => {
     // This is our tx sponsor, let's give him some cash.
@@ -110,15 +110,15 @@ describe("aa_poc", () => {
   it.skip("Init wallet", async () => {
     const initTx = await program.methods
       .initWallet()
-      .accounts({ assignGuardian: mainGuardian.publicKey })
+      .accounts({ assignGuardian: primaryGuardian.publicKey })
       .transaction();
-    await sendWithPayer(initTx, sponsor, mainGuardian);
+    await sendWithPayer(initTx, sponsor, primaryGuardian);
   });
 
   it("AA Demo", async () => {
     console.log("Provider: ", provider.publicKey.toBase58());
     console.log("Sponsor: ", sponsor.publicKey.toBase58());
-    console.log("Hotwallet: ", mainGuardian.publicKey.toBase58());
+    console.log("Hotwallet: ", primaryGuardian.publicKey.toBase58());
 
     // We aren't dropping SOL into the signer
     // This shows how a SOLless wallet can still sign (approve) transactions with an external payer
@@ -126,10 +126,10 @@ describe("aa_poc", () => {
 
     const initTx = await program.methods
       .initWallet()
-      .accounts({ assignGuardian: mainGuardian.publicKey })
+      .accounts({ assignGuardian: primaryGuardian.publicKey })
       .transaction();
 
-    await sendWithPayer(initTx, sponsor, mainGuardian);
+    await sendWithPayer(initTx, sponsor, primaryGuardian);
 
     console.log("Sponsor balance: ", await getBalance(sponsor.publicKey));
 
@@ -138,10 +138,13 @@ describe("aa_poc", () => {
     // We can register a 2nd guardian
     const registerTx = await program.methods
       .registerKeypair()
-      .accounts({ assignGuardian: secondaryGuardian.publicKey })
+      .accounts({
+        seedGuardian: primaryGuardian.publicKey,
+        assignGuardian: secondaryGuardian.publicKey,
+      })
       .transaction();
 
-    await sendWithPayer(registerTx, sponsor, secondaryGuardian);
+    await sendWithPayer(registerTx, sponsor, primaryGuardian);
 
     console.log("Sponsor balance: ", await getBalance(sponsor.publicKey));
 
@@ -149,19 +152,23 @@ describe("aa_poc", () => {
 
     const execTx = await program.methods
       .execInstruction(testIx.data)
-      .accounts({ payer: sponsor.publicKey, guardian: mainGuardian.publicKey })
+      .accounts({
+        payer: sponsor.publicKey,
+        guardian: primaryGuardian.publicKey,
+        seedGuardian: primaryGuardian.publicKey,
+      })
       .remainingAccounts([
         { isSigner: false, isWritable: false, pubkey: program.programId },
       ])
       .transaction();
 
-    const a = await sendWithPayer(execTx, sponsor, mainGuardian);
+    const a = await sendWithPayer(execTx, sponsor, primaryGuardian);
 
     console.log("LOGS:");
     console.log(a.meta.logMessages);
 
     const payerBalance = await getBalance(sponsor.publicKey);
-    const signerBalance = await getBalance(mainGuardian.publicKey);
+    const signerBalance = await getBalance(primaryGuardian.publicKey);
 
     console.log("Sponsor balance: ", payerBalance);
     console.log("Hotwallet balance: ", signerBalance);

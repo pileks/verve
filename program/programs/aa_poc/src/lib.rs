@@ -8,6 +8,11 @@ const PDA_WALLET_SEED: &[u8; 1] = b"w";
 const PDA_WALLET_GUARDIAN_SEED: &[u8; 2] = b"wg";
 
 const CHALLENGE: &[u8] = b"Hello!";
+
+/// PDA derivation
+/// wallet: PDA_WALLET_SEED, guardian(original)
+/// wallet_guardian: PDA_WALLET_GUARDIAN_SEED, wallet, guardian(original or new, depending on situation)
+
 #[program]
 pub mod aa_poc {
     use anchor_lang::solana_program::{
@@ -78,11 +83,6 @@ pub mod aa_poc {
         ctx: Context<ExecInstruction>,
         instruction_data: Vec<u8>,
     ) -> Result<()> {
-        // msg!("LEN {}", instruction_data.len());
-        // msg!("PAYER {}", ctx.accounts.payer.key());
-        msg!("GUARDIAN {}", ctx.accounts.guardian.key());
-        msg!("WALLET {}", ctx.accounts.wallet.key());
-
         require!(
             ctx.accounts
                 .guardian
@@ -139,7 +139,7 @@ pub struct InitWallet<'info> {
         init,
         payer=payer,
         space=size_of::<Wallet>() + 8,
-        seeds=[PDA_WALLET_SEED],
+        seeds=[PDA_WALLET_SEED, assign_guardian.key().as_ref()],
         bump
     )]
     pub wallet: Account<'info, Wallet>,
@@ -148,7 +148,7 @@ pub struct InitWallet<'info> {
         init,
         payer=payer,
         space=size_of::<WalletGuardian>() + 8,
-        seeds=[PDA_WALLET_GUARDIAN_SEED, assign_guardian.key().as_ref()],
+        seeds=[PDA_WALLET_GUARDIAN_SEED, wallet.key().as_ref(), assign_guardian.key().as_ref()],
         bump
     )]
     pub wallet_guardian: Account<'info, WalletGuardian>,
@@ -166,7 +166,7 @@ pub struct InitWallet<'info> {
 pub struct RegisterKeypair<'info> {
     #[account(
         mut,
-        seeds=[PDA_WALLET_SEED],
+        seeds=[PDA_WALLET_SEED, seed_guardian.key().as_ref()],
         bump
     )]
     pub wallet: Account<'info, Wallet>,
@@ -175,13 +175,17 @@ pub struct RegisterKeypair<'info> {
         init,
         payer=payer,
         space=size_of::<WalletGuardian>() + 8,
-        seeds=[PDA_WALLET_GUARDIAN_SEED, assign_guardian.key().as_ref()],
+        seeds=[PDA_WALLET_GUARDIAN_SEED, wallet.key().as_ref(), assign_guardian.key().as_ref()],
         bump
     )]
     pub wallet_guardian: Account<'info, WalletGuardian>,
 
+    /// CHECK: we merely assign a new account as a guardian, no checks required
     #[account()]
-    pub assign_guardian: Signer<'info>,
+    pub assign_guardian: AccountInfo<'info>,
+
+    #[account()]
+    pub seed_guardian: Signer<'info>,
 
     #[account(mut)]
     pub payer: Signer<'info>,
@@ -193,16 +197,20 @@ pub struct RegisterKeypair<'info> {
 pub struct ExecInstruction<'info> {
     #[account(
         mut,
-        seeds=[PDA_WALLET_SEED], // , &guardian.key().to_bytes()
+        seeds=[PDA_WALLET_SEED, seed_guardian.key().as_ref()],
         bump
     )]
     pub wallet: Account<'info, Wallet>,
 
     #[account(
-        seeds=[PDA_WALLET_GUARDIAN_SEED, guardian.key().as_ref()],
+        seeds=[PDA_WALLET_GUARDIAN_SEED, wallet.key().as_ref(), guardian.key().as_ref()],
         bump
     )]
     pub wallet_guardian: Account<'info, WalletGuardian>,
+
+    /// CHECK: we merely assign a new account as a guardian, no checks required
+    #[account()]
+    pub seed_guardian: AccountInfo<'info>,
 
     #[account()]
     pub guardian: Signer<'info>,
