@@ -136,13 +136,11 @@ pub struct VerifyEcdsa {}
 #[derive(Accounts)]
 pub struct InitWallet<'info> {
     #[account(
-        init,
-        payer=payer,
-        space=size_of::<Wallet>() + 8,
         seeds=[PDA_WALLET_SEED, assign_guardian.key().as_ref()],
         bump
     )]
-    pub wallet: Account<'info, Wallet>,
+    /// CHECK: No need to have this account initialized
+    pub wallet: AccountInfo<'info>,
 
     #[account(
         init,
@@ -165,11 +163,11 @@ pub struct InitWallet<'info> {
 #[derive(Accounts)]
 pub struct RegisterKeypair<'info> {
     #[account(
-        mut,
         seeds=[PDA_WALLET_SEED, seed_guardian.key().as_ref()],
         bump
     )]
-    pub wallet: Account<'info, Wallet>,
+    /// CHECK: No need to have this account initialized
+    pub wallet: AccountInfo<'info>,
 
     #[account(
         init,
@@ -200,7 +198,8 @@ pub struct ExecInstruction<'info> {
         seeds=[PDA_WALLET_SEED, seed_guardian.key().as_ref()],
         bump
     )]
-    pub wallet: Account<'info, Wallet>,
+    /// CHECK: No need to have this account initialized
+    pub wallet: AccountInfo<'info>,
 
     #[account(
         seeds=[PDA_WALLET_GUARDIAN_SEED, wallet.key().as_ref(), guardian.key().as_ref()],
