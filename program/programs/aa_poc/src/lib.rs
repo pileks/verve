@@ -4,13 +4,15 @@ use anchor_lang::prelude::*;
 
 declare_id!("7UD7pBcVkw2yJQzdm9eNTfeSC8uo2WhM6MdUzBXK48zv");
 
-const PDA_WALLET_SEED: &[u8; 6] = b"wallet";
+const PDA_WALLET_SEED: &[u8; 1] = b"w";
+const PDA_WALLET_GUARDIAN_SEED: &[u8; 2] = b"wg";
 
 const CHALLENGE: &[u8] = b"Hello!";
 #[program]
 pub mod aa_poc {
     use anchor_lang::solana_program::{
-        instruction::Instruction, secp256k1_recover::{secp256k1_recover, Secp256k1Pubkey},
+        instruction::Instruction,
+        secp256k1_recover::{secp256k1_recover, Secp256k1Pubkey},
     };
     use tiny_keccak::{Hasher, Sha3};
 
@@ -22,21 +24,37 @@ pub mod aa_poc {
         Ok(())
     }
 
-    pub fn init_wallet(_ctx: Context<InitWallet>) -> Result<()> {
+    pub fn init_wallet(ctx: Context<InitWallet>) -> Result<()> {
+        ctx.accounts.wallet_guardian.wallet = ctx.accounts.wallet.key();
+        ctx.accounts.wallet_guardian.guardian = ctx.accounts.assign_guardian.key();
+
+        msg!(
+            "Wallet {} has been initialized with guardian: {}",
+            ctx.accounts.wallet.key(),
+            ctx.accounts.assign_guardian.key()
+        );
+
         Ok(())
     }
 
     pub fn register_keypair(ctx: Context<RegisterKeypair>) -> Result<()> {
-        ctx.accounts.wallet.controller = ctx.accounts.signer.key();
-        msg!("New signer: {}", ctx.accounts.signer.key());
+        ctx.accounts.wallet_guardian.guardian = ctx.accounts.assign_guardian.key();
+        ctx.accounts.wallet_guardian.wallet = ctx.accounts.wallet.key();
+
+        msg!(
+            "Wallet {} has new guardian: {}",
+            ctx.accounts.wallet.key(),
+            ctx.accounts.assign_guardian.key()
+        );
+
         Ok(())
     }
 
     pub fn verify_ecdsa(
-        _ctx: Context<JwtTest>,
+        _ctx: Context<VerifyEcdsa>,
         signature_bytes: Vec<u8>,
         recovery_param: u8,
-        pubkey_bytes: Vec<u8>
+        pubkey_bytes: Vec<u8>,
     ) -> Result<()> {
         let mut sha3 = Sha3::v256();
         let mut output = [0u8; 32];
@@ -48,7 +66,10 @@ pub mod aa_poc {
         let actual_pubkey = secp256k1_recover(&output, recovery_param, &signature_bytes)
             .map_err(|_| AaError::InvalidSignature)?;
 
-        require!(expected_pubkey.eq(&actual_pubkey), AaError::InvalidSignature);
+        require!(
+            expected_pubkey.eq(&actual_pubkey),
+            AaError::InvalidSignature
+        );
 
         Ok(())
     }
@@ -59,18 +80,27 @@ pub mod aa_poc {
     ) -> Result<()> {
         // msg!("LEN {}", instruction_data.len());
         // msg!("PAYER {}", ctx.accounts.payer.key());
-        // msg!("SIGNER {}", ctx.accounts.signer.key());
+        msg!("GUARDIAN {}", ctx.accounts.guardian.key());
+        msg!("WALLET {}", ctx.accounts.wallet.key());
 
         require!(
             ctx.accounts
-                .signer
+                .guardian
                 .key()
-                .eq(&ctx.accounts.wallet.controller.key()),
-            AaError::ControllerMismatch
+                .eq(&ctx.accounts.wallet_guardian.guardian.key()),
+            AaError::GuardianMismatch
+        );
+
+        require!(
+            ctx.accounts
+                .wallet
+                .key()
+                .eq(&ctx.accounts.wallet_guardian.wallet.key()),
+            AaError::GuardianMismatch
         );
 
         msg!("Executing tx for AA wallet: {}", ctx.accounts.wallet.key());
-        msg!("Tx approved by: {}", ctx.accounts.signer.key());
+        msg!("Tx approved by: {}", ctx.accounts.guardian.key());
 
         let instruction = Instruction {
             accounts: [].to_vec(),
@@ -98,53 +128,10 @@ pub mod aa_poc {
 }
 
 #[derive(Accounts)]
-pub struct ExecuteTransaction<'info> {
-    #[account()]
-    pub signer: Signer<'info>,
-
-    #[account(mut)]
-    pub payer: Signer<'info>,
-}
-
-#[derive(Accounts)]
 pub struct TestTransaction {}
 
 #[derive(Accounts)]
-pub struct JwtTest {}
-
-#[derive(Accounts)]
-pub struct RegisterKeypair<'info> {
-    #[account(
-        mut,
-        seeds=[PDA_WALLET_SEED],
-        bump
-    )]
-    pub wallet: Account<'info, Wallet>,
-
-    #[account(mut)]
-    pub signer: Signer<'info>,
-}
-
-#[derive(Accounts)]
-pub struct ExecInstruction<'info> {
-    #[account(
-        mut,
-        seeds=[PDA_WALLET_SEED],
-        bump
-    )]
-    pub wallet: Account<'info, Wallet>,
-
-    #[account()]
-    pub signer: Signer<'info>,
-
-    #[account(mut)]
-    pub payer: Signer<'info>,
-    // pub system_program: Program<'info, System>,
-
-    // CHECK: Just the program we're targetting, surely there's a better way
-    // #[account(executable)]
-    // pub target_program: AccountInfo<'info>,
-}
+pub struct VerifyEcdsa {}
 
 #[derive(Accounts)]
 pub struct InitWallet<'info> {
@@ -157,6 +144,69 @@ pub struct InitWallet<'info> {
     )]
     pub wallet: Account<'info, Wallet>,
 
+    #[account(
+        init,
+        payer=payer,
+        space=size_of::<WalletGuardian>() + 8,
+        seeds=[PDA_WALLET_GUARDIAN_SEED, assign_guardian.key().as_ref()],
+        bump
+    )]
+    pub wallet_guardian: Account<'info, WalletGuardian>,
+
+    #[account()]
+    pub assign_guardian: Signer<'info>,
+
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct RegisterKeypair<'info> {
+    #[account(
+        mut,
+        seeds=[PDA_WALLET_SEED],
+        bump
+    )]
+    pub wallet: Account<'info, Wallet>,
+
+    #[account(
+        init,
+        payer=payer,
+        space=size_of::<WalletGuardian>() + 8,
+        seeds=[PDA_WALLET_GUARDIAN_SEED, assign_guardian.key().as_ref()],
+        bump
+    )]
+    pub wallet_guardian: Account<'info, WalletGuardian>,
+
+    #[account()]
+    pub assign_guardian: Signer<'info>,
+
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct ExecInstruction<'info> {
+    #[account(
+        mut,
+        seeds=[PDA_WALLET_SEED], // , &guardian.key().to_bytes()
+        bump
+    )]
+    pub wallet: Account<'info, Wallet>,
+
+    #[account(
+        seeds=[PDA_WALLET_GUARDIAN_SEED, guardian.key().as_ref()],
+        bump
+    )]
+    pub wallet_guardian: Account<'info, WalletGuardian>,
+
+    #[account()]
+    pub guardian: Signer<'info>,
+
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -164,14 +214,20 @@ pub struct InitWallet<'info> {
 }
 
 #[account]
-pub struct Wallet {
-    pub controller: Pubkey,
+pub struct Wallet {}
+
+#[account]
+pub struct WalletGuardian {
+    pub wallet: Pubkey,
+    pub guardian: Pubkey,
 }
 
 #[error_code]
 pub enum AaError {
-    #[msg("Controller mismatch")]
-    ControllerMismatch,
+    #[msg("Guardian mismatch")]
+    GuardianMismatch,
+    #[msg("Wallet mismatch")]
+    WalletMismatch,
     #[msg("Invalid token")]
     InvalidToken,
     #[msg("Invalid algorithm")]

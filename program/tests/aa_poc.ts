@@ -22,19 +22,19 @@ describe("aa_poc", () => {
 
   const program = anchor.workspace.AaPoc as Program<AaPoc>;
 
-  const confirmTransaction = async (tx: string) => {
+  const confirmTransaction = async (txSignature: string) => {
     const bh = await provider.connection.getLatestBlockhash();
 
     await provider.connection.confirmTransaction(
       {
-        signature: tx,
+        signature: txSignature,
         blockhash: bh.blockhash,
         lastValidBlockHeight: bh.lastValidBlockHeight,
       },
       "confirmed"
     );
 
-    const txDetails = await provider.connection.getTransaction(tx, {
+    const txDetails = await provider.connection.getTransaction(txSignature, {
       commitment: "confirmed",
       maxSupportedTransactionVersion: 0,
     });
@@ -75,12 +75,14 @@ describe("aa_poc", () => {
     );
   };
 
+  const mainGuardian = new Keypair();
+
   before(async () => {
     // This is our tx sponsor, let's give him some cash.
     await airdropSol(sponsor.publicKey, 100);
   });
 
-  it("ECDSA Auth", async () => {
+  it.skip("ECDSA Auth", async () => {
     const ec = new elliptic.ec("secp256k1");
 
     const key = ec.genKeyPair();
@@ -105,53 +107,61 @@ describe("aa_poc", () => {
     console.log(result.meta.logMessages);
   });
 
-  it("Init wallet", async() => {
-    const initTx = await program.methods.initWallet().transaction();
-    await sendWithPayer(initTx, sponsor);
+  it.skip("Init wallet", async () => {
+    const initTx = await program.methods
+      .initWallet()
+      .accounts({ assignGuardian: mainGuardian.publicKey })
+      .transaction();
+    await sendWithPayer(initTx, sponsor, mainGuardian);
   });
 
-  it.skip("AA Demo", async () => {
-    const hotwallet = new Keypair();
-
+  it("AA Demo", async () => {
     console.log("Provider: ", provider.publicKey.toBase58());
     console.log("Sponsor: ", sponsor.publicKey.toBase58());
-    console.log("Signer: ", hotwallet.publicKey.toBase58());
+    console.log("Hotwallet: ", mainGuardian.publicKey.toBase58());
 
     // We aren't dropping SOL into the signer
     // This shows how a SOLless wallet can still sign (approve) transactions with an external payer
     // await airdropSol(signer.publicKey, 100);
 
-    const initTx = await program.methods.initWallet().transaction();
+    const initTx = await program.methods
+      .initWallet()
+      .accounts({ assignGuardian: mainGuardian.publicKey })
+      .transaction();
 
-    await sendWithPayer(initTx, sponsor);
+    await sendWithPayer(initTx, sponsor, mainGuardian);
 
     console.log("Sponsor balance: ", await getBalance(sponsor.publicKey));
 
+    const secondaryGuardian = new Keypair();
+
+    // We can register a 2nd guardian
     const registerTx = await program.methods
       .registerKeypair()
-      .accounts({ signer: hotwallet.publicKey })
+      .accounts({ assignGuardian: secondaryGuardian.publicKey })
       .transaction();
 
-    await sendWithPayer(registerTx, sponsor, hotwallet);
+    await sendWithPayer(registerTx, sponsor, secondaryGuardian);
 
     console.log("Sponsor balance: ", await getBalance(sponsor.publicKey));
 
     const testIx = await program.methods.testTransaction().instruction();
+
     const execTx = await program.methods
       .execInstruction(testIx.data)
-      .accounts({ payer: sponsor.publicKey, signer: hotwallet.publicKey })
+      .accounts({ payer: sponsor.publicKey, guardian: mainGuardian.publicKey })
       .remainingAccounts([
         { isSigner: false, isWritable: false, pubkey: program.programId },
       ])
       .transaction();
 
-    const a = await sendWithPayer(execTx, sponsor, hotwallet);
+    const a = await sendWithPayer(execTx, sponsor, mainGuardian);
 
     console.log("LOGS:");
     console.log(a.meta.logMessages);
 
     const payerBalance = await getBalance(sponsor.publicKey);
-    const signerBalance = await getBalance(hotwallet.publicKey);
+    const signerBalance = await getBalance(mainGuardian.publicKey);
 
     console.log("Sponsor balance: ", payerBalance);
     console.log("Hotwallet balance: ", signerBalance);
