@@ -204,8 +204,9 @@ describe("aa_poc", () => {
     console.log("Hotwallet balance: ", signerBalance);
   });
 
-  it("Airdrop token into nonexistent account", async () => {
-    const seeds = [Buffer.from("b"), new Keypair().publicKey.toBuffer()];
+  it("Airdrop token into nonexistent PDA", async () => {
+    // we're simulating how we would derive a wallet PDA, just for the lols
+    const seeds = [Buffer.from("w"), new Keypair().publicKey.toBuffer()];
 
     const [pdaPubkey, bump] = PublicKey.findProgramAddressSync(
       seeds,
