@@ -10,8 +10,8 @@ const PDA_WALLET_GUARDIAN_SEED: &[u8; 2] = b"wg";
 const CHALLENGE: &[u8] = b"Hello!";
 
 /// PDA derivation
-/// wallet: PDA_WALLET_SEED, guardian(original)
-/// wallet_guardian: PDA_WALLET_GUARDIAN_SEED, wallet, guardian(original or new, depending on situation)
+/// wallet: PDA_WALLET_SEED, original_guardian_pubkey
+/// wallet_guardian: PDA_WALLET_GUARDIAN_SEED, wallet, guardian_pubkey(original or new, depending on situation)
 
 #[program]
 pub mod aa_poc {
@@ -23,7 +23,9 @@ pub mod aa_poc {
 
     use super::*;
 
-    pub fn test_transaction(_ctx: Context<TestTransaction>) -> Result<()> {
+    pub fn test_transaction(ctx: Context<TestTransaction>) -> Result<()> {
+        msg!("Test tx signer: {}", ctx.accounts.signer.key());
+
         msg!("Hello World!");
 
         Ok(())
@@ -55,30 +57,6 @@ pub mod aa_poc {
         Ok(())
     }
 
-    pub fn verify_ecdsa(
-        _ctx: Context<VerifyEcdsa>,
-        signature_bytes: Vec<u8>,
-        recovery_param: u8,
-        pubkey_bytes: Vec<u8>,
-    ) -> Result<()> {
-        let mut sha3 = Sha3::v256();
-        let mut output = [0u8; 32];
-        sha3.update(CHALLENGE);
-        sha3.finalize(&mut output);
-
-        let expected_pubkey = Secp256k1Pubkey::new(&pubkey_bytes[1..65]);
-
-        let actual_pubkey = secp256k1_recover(&output, recovery_param, &signature_bytes)
-            .map_err(|_| AaError::InvalidSignature)?;
-
-        require!(
-            expected_pubkey.eq(&actual_pubkey),
-            AaError::InvalidSignature
-        );
-
-        Ok(())
-    }
-
     pub fn exec_instruction(
         ctx: Context<ExecInstruction>,
         instruction_data: Vec<u8>,
@@ -103,43 +81,61 @@ pub mod aa_poc {
         msg!("Tx approved by: {}", ctx.accounts.guardian.key());
 
         let instruction = Instruction {
-            accounts: [].to_vec(),
+            accounts: ctx.accounts.wallet.to_account_metas(Some(true)).to_vec(),
             data: instruction_data,
             program_id: ctx.remaining_accounts[0].key(),
         };
-        let seeds = [&PDA_WALLET_SEED[..], &[ctx.bumps.wallet][..]];
+
+        let seed_guardian_key = ctx.accounts.seed_guardian.key();
+        let seeds = [
+            &PDA_WALLET_SEED[..],
+            seed_guardian_key.as_ref(),
+            &[ctx.bumps.wallet][..],
+        ];
         let signer_seeds = &[&seeds[..]];
-
-        // let cpi_accounts = anchor_lang::context::CpiContext::new(
-        //     ctx.accounts.target_program.to_account_info(),
-        //     ctx.accounts.target_program.to_account_info(),
-        // );
-
-        // anchor_lang::solana_program::program::invoke(&instruction, ctx.remaining_accounts)?;
 
         anchor_lang::solana_program::program::invoke_signed(
             &instruction,
-            ctx.remaining_accounts,
+            &[ctx.accounts.wallet.to_account_info()],
             signer_seeds,
         )?;
+
+        Ok(())
+    }
+
+    // TODO: We can use this to verify secp256k1 signatures (might need for passkeys later on)
+    pub fn verify_ecdsa(
+        _ctx: Context<VerifyEcdsa>,
+        signature_bytes: Vec<u8>,
+        recovery_param: u8,
+        pubkey_bytes: Vec<u8>,
+    ) -> Result<()> {
+        let mut sha3 = Sha3::v256();
+        let mut output = [0u8; 32];
+        sha3.update(CHALLENGE);
+        sha3.finalize(&mut output);
+
+        let expected_pubkey = Secp256k1Pubkey::new(&pubkey_bytes[1..65]);
+
+        let actual_pubkey = secp256k1_recover(&output, recovery_param, &signature_bytes)
+            .map_err(|_| AaError::InvalidSignature)?;
+
+        require!(
+            expected_pubkey.eq(&actual_pubkey),
+            AaError::InvalidSignature
+        );
 
         Ok(())
     }
 }
 
 #[derive(Accounts)]
-pub struct TestTransaction {}
-
-#[derive(Accounts)]
-pub struct VerifyEcdsa {}
-
-#[derive(Accounts)]
 pub struct InitWallet<'info> {
+    /// CHECK: No need to have this account initialized lol
     #[account(
         seeds=[PDA_WALLET_SEED, assign_guardian.key().as_ref()],
         bump
     )]
-    /// CHECK: No need to have this account initialized
     pub wallet: AccountInfo<'info>,
 
     #[account(
@@ -162,11 +158,11 @@ pub struct InitWallet<'info> {
 
 #[derive(Accounts)]
 pub struct RegisterKeypair<'info> {
+    /// CHECK: No need to have this account initialized lol
     #[account(
         seeds=[PDA_WALLET_SEED, seed_guardian.key().as_ref()],
         bump
     )]
-    /// CHECK: No need to have this account initialized
     pub wallet: AccountInfo<'info>,
 
     #[account(
@@ -193,12 +189,12 @@ pub struct RegisterKeypair<'info> {
 
 #[derive(Accounts)]
 pub struct ExecInstruction<'info> {
+    /// CHECK: No need to have this account initialized lol
     #[account(
         mut,
         seeds=[PDA_WALLET_SEED, seed_guardian.key().as_ref()],
         bump
     )]
-    /// CHECK: No need to have this account initialized
     pub wallet: AccountInfo<'info>,
 
     #[account(
@@ -221,13 +217,20 @@ pub struct ExecInstruction<'info> {
 }
 
 #[account]
-pub struct Wallet {}
-
-#[account]
 pub struct WalletGuardian {
     pub wallet: Pubkey,
     pub guardian: Pubkey,
 }
+
+#[derive(Accounts)]
+pub struct TestTransaction<'info> {
+    /// CHECK: Just checking bro
+    #[account()]
+    pub signer: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct VerifyEcdsa {}
 
 #[error_code]
 pub enum AaError {

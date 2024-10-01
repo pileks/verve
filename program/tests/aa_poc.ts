@@ -150,7 +150,9 @@ describe("aa_poc", () => {
 
     const testIx = await program.methods.testTransaction().instruction();
 
-    const execTx = await program.methods
+    // Exec as primary
+    console.log("Executing as primary guardian...");
+    const execPrimaryTx = await program.methods
       .execInstruction(testIx.data)
       .accounts({
         payer: sponsor.publicKey,
@@ -162,10 +164,37 @@ describe("aa_poc", () => {
       ])
       .transaction();
 
-    const a = await sendWithPayer(execTx, sponsor, primaryGuardian);
+    const primaryTx = await sendWithPayer(
+      execPrimaryTx,
+      sponsor,
+      primaryGuardian
+    );
 
     console.log("LOGS:");
-    console.log(a.meta.logMessages);
+    console.log(primaryTx.meta.logMessages);
+
+    // Exec as secondary
+    console.log("Executing as secondary guardian...");
+    const execSecondaryTx = await program.methods
+      .execInstruction(testIx.data)
+      .accounts({
+        payer: sponsor.publicKey,
+        guardian: secondaryGuardian.publicKey,
+        seedGuardian: primaryGuardian.publicKey,
+      })
+      .remainingAccounts([
+        { isSigner: false, isWritable: false, pubkey: program.programId },
+      ])
+      .transaction();
+
+    const secondaryTx = await sendWithPayer(
+      execSecondaryTx,
+      sponsor,
+      secondaryGuardian
+    );
+
+    console.log("LOGS:");
+    console.log(secondaryTx.meta.logMessages);
 
     const payerBalance = await getBalance(sponsor.publicKey);
     const signerBalance = await getBalance(primaryGuardian.publicKey);
