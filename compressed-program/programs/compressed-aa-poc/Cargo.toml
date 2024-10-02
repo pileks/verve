@@ -1,0 +1,37 @@
+[package]
+name = "compressed-aa-poc"
+version = "0.1.0"
+description = "Created with Anchor"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "compressed_aa_poc"
+
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+default = ["idl-build"]
+test-sbf = []
+bench-sbf = []
+idl-build = ["anchor-lang/idl-build", "light-sdk/idl-build"]
+
+[dependencies]
+anchor-lang = "0.29.0"
+light-hasher = {version="1.1.0", features = ["solana"] }
+light-macros = "1.1.0"
+light-sdk = "0.10.0"
+light-sdk-macros = "0.3.0" 
+light-utils = "1.1.0"
+light-verifier = "1.1.0"
+
+[target.'cfg(not(target_os = "solana"))'.dependencies]
+solana-sdk = "1.18.22"
+
+[dev-dependencies]
+light-client ="0.9.1"
+light-test-utils = "1.2.1"
+solana-program-test = "1.18.22"
+tokio = "1.36.0"

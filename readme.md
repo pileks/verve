@@ -1,3 +1,21 @@
+# Verve
+
+## Program
+
+The base program logic is implemented inside the `program` directory.
+
+## ZK Compression
+
+The ZK compressed program lies within the `compressed-program` directory.
+
+Thanks to ZK compression, we can reduce costs of creating accounts and assigning new guardians down to 0.01 cents (0.0001 USD).
+
+The ZK compressed program will be used as the main implementation in Verve wallet.
+
+The base program exists merely as a simpler way to test new features, before merging them into the ZK program.
+
+Swen, give us a `#[light_instruction]` macro pls bro.
+
 ## How to run this
 
 1. In one terminal, start a **fresh** local Solana validator:

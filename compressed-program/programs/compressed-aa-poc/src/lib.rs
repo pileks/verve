@@ -1,39 +1,32 @@
-use std::mem::size_of;
+/// 👽👽👽👽👽👽👽👽👽
+///     A Y Y  L M A O    
+/// 👽👽👽👽👽👽👽👽👽
+/// VIVA LA ZK COMPRESSION
+/// 👽👽👽👽👽👽👽👽👽
 
 use anchor_lang::prelude::*;
+use light_sdk::{
+    compressed_account::LightAccount, light_account, light_accounts, light_program,
+    merkle_context::PackedAddressMerkleContext,
+};
 
-declare_id!("7UD7pBcVkw2yJQzdm9eNTfeSC8uo2WhM6MdUzBXK48zv");
+declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
 const PDA_WALLET_SEED: &[u8; 1] = b"w";
 const PDA_WALLET_GUARDIAN_SEED: &[u8; 2] = b"wg";
 
-const CHALLENGE: &[u8] = b"Hello!";
-
-/// PDA derivation
-/// wallet: PDA_WALLET_SEED, original_guardian_pubkey
-/// wallet_guardian: PDA_WALLET_GUARDIAN_SEED, wallet, guardian_pubkey(original or new, depending on situation)
-
+#[light_program]
 #[program]
-pub mod aa_poc {
-    use anchor_lang::solana_program::{
-        instruction::Instruction,
-        secp256k1_recover::{secp256k1_recover, Secp256k1Pubkey},
-    };
-    use tiny_keccak::{Hasher, Sha3};
+pub mod compressed_aa_poc {
+    use anchor_lang::solana_program::instruction::Instruction;
 
     use super::*;
 
-    pub fn test_transaction(ctx: Context<TestTransaction>) -> Result<()> {
-        msg!("Test tx signer: {}", ctx.accounts.signer.key());
-
-        msg!("Hello World!");
-
-        Ok(())
-    }
-
-    pub fn init_wallet(ctx: Context<InitWallet>) -> Result<()> {
-        ctx.accounts.wallet_guardian.wallet = ctx.accounts.wallet.key();
-        ctx.accounts.wallet_guardian.guardian = ctx.accounts.assign_guardian.key();
+    pub fn init_wallet<'info>(
+        ctx: LightContext<'_, '_, '_, 'info, InitWallet<'info>>,
+    ) -> Result<()> {
+        ctx.light_accounts.wallet_guardian.guardian = ctx.accounts.wallet.key();
+        ctx.light_accounts.wallet_guardian.guardian = ctx.accounts.assign_guardian.key();
 
         msg!(
             "Wallet {} has been initialized with guardian: {}",
@@ -44,9 +37,11 @@ pub mod aa_poc {
         Ok(())
     }
 
-    pub fn register_keypair(ctx: Context<RegisterKeypair>) -> Result<()> {
-        ctx.accounts.wallet_guardian.guardian = ctx.accounts.assign_guardian.key();
-        ctx.accounts.wallet_guardian.wallet = ctx.accounts.wallet.key();
+    pub fn register_keypair<'info>(
+        ctx: LightContext<'_, '_, '_, 'info, RegisterKeypair<'info>>,
+    ) -> Result<()> {
+        ctx.light_accounts.wallet_guardian.guardian = ctx.accounts.assign_guardian.key();
+        ctx.light_accounts.wallet_guardian.wallet = ctx.accounts.wallet.key();
 
         msg!(
             "Wallet {} has new guardian: {}",
@@ -57,15 +52,15 @@ pub mod aa_poc {
         Ok(())
     }
 
-    pub fn exec_instruction(
-        ctx: Context<ExecInstruction>,
+    pub fn exec_instruction<'info>(
+        ctx: LightContext<'_, '_, '_, 'info, ExecInstruction<'info>>,
         instruction_data: Vec<u8>,
     ) -> Result<()> {
         require!(
             ctx.accounts
                 .guardian
                 .key()
-                .eq(&ctx.accounts.wallet_guardian.guardian.key()),
+                .eq(&ctx.light_accounts.wallet_guardian.guardian.key()),
             AaError::GuardianMismatch
         );
 
@@ -73,7 +68,7 @@ pub mod aa_poc {
             ctx.accounts
                 .wallet
                 .key()
-                .eq(&ctx.accounts.wallet_guardian.wallet.key()),
+                .eq(&ctx.light_accounts.wallet_guardian.wallet.key()),
             AaError::GuardianMismatch
         );
 
@@ -102,77 +97,59 @@ pub mod aa_poc {
 
         Ok(())
     }
-
-    // TODO: We can use this to verify secp256k1 signatures (might need for passkeys later on)
-    pub fn verify_ecdsa(
-        _ctx: Context<VerifyEcdsa>,
-        signature_bytes: Vec<u8>,
-        recovery_param: u8,
-        pubkey_bytes: Vec<u8>,
-    ) -> Result<()> {
-        let mut sha3 = Sha3::v256();
-        let mut output = [0u8; 32];
-        sha3.update(CHALLENGE);
-        sha3.finalize(&mut output);
-
-        let expected_pubkey = Secp256k1Pubkey::new(&pubkey_bytes[1..65]);
-
-        let actual_pubkey = secp256k1_recover(&output, recovery_param, &signature_bytes)
-            .map_err(|_| AaError::InvalidSignature)?;
-
-        require!(
-            expected_pubkey.eq(&actual_pubkey),
-            AaError::InvalidSignature
-        );
-
-        Ok(())
-    }
 }
 
-#[derive(Accounts)]
+#[light_account]
+#[derive(Clone, Debug, Default)]
+pub struct WalletGuardian {
+    #[truncate]
+    pub wallet: Pubkey,
+    #[truncate]
+    pub guardian: Pubkey,
+}
+
+#[light_accounts]
 pub struct InitWallet<'info> {
     /// CHECK: No need to have this account initialized lol
     #[account(
-        seeds=[PDA_WALLET_SEED, assign_guardian.key().as_ref()],
-        bump
-    )]
+            seeds=[PDA_WALLET_SEED, assign_guardian.key().as_ref()],
+            bump
+        )]
     pub wallet: AccountInfo<'info>,
 
-    #[account(
+    #[light_account(
         init,
-        payer=payer,
-        space=size_of::<WalletGuardian>() + 8,
         seeds=[PDA_WALLET_GUARDIAN_SEED, wallet.key().as_ref(), assign_guardian.key().as_ref()],
-        bump
     )]
-    pub wallet_guardian: Account<'info, WalletGuardian>,
+    pub wallet_guardian: LightAccount<WalletGuardian>,
 
     #[account()]
     pub assign_guardian: Signer<'info>,
 
     #[account(mut)]
+    #[fee_payer]
     pub payer: Signer<'info>,
-
-    pub system_program: Program<'info, System>,
+    #[self_program]
+    pub self_program: Program<'info, crate::program::CompressedAaPoc>,
+    /// CHECK: Checked in light-system-program.
+    #[authority]
+    pub cpi_signer: AccountInfo<'info>,
 }
 
-#[derive(Accounts)]
+#[light_accounts]
 pub struct RegisterKeypair<'info> {
     /// CHECK: No need to have this account initialized lol
     #[account(
-        seeds=[PDA_WALLET_SEED, seed_guardian.key().as_ref()],
-        bump
-    )]
+            seeds=[PDA_WALLET_SEED, assign_guardian.key().as_ref()],
+            bump
+        )]
     pub wallet: AccountInfo<'info>,
 
-    #[account(
+    #[light_account(
         init,
-        payer=payer,
-        space=size_of::<WalletGuardian>() + 8,
         seeds=[PDA_WALLET_GUARDIAN_SEED, wallet.key().as_ref(), assign_guardian.key().as_ref()],
-        bump
     )]
-    pub wallet_guardian: Account<'info, WalletGuardian>,
+    pub wallet_guardian: LightAccount<WalletGuardian>,
 
     /// CHECK: we merely assign a new account as a guardian, no checks required
     #[account()]
@@ -182,26 +159,29 @@ pub struct RegisterKeypair<'info> {
     pub seed_guardian: Signer<'info>,
 
     #[account(mut)]
+    #[fee_payer]
     pub payer: Signer<'info>,
-
-    pub system_program: Program<'info, System>,
+    #[self_program]
+    pub self_program: Program<'info, crate::program::CompressedAaPoc>,
+    /// CHECK: Checked in light-system-program.
+    #[authority]
+    pub cpi_signer: AccountInfo<'info>,
 }
 
-#[derive(Accounts)]
+#[light_accounts]
 pub struct ExecInstruction<'info> {
     /// CHECK: No need to have this account initialized lol
     #[account(
-        mut,
-        seeds=[PDA_WALLET_SEED, seed_guardian.key().as_ref()],
-        bump
-    )]
+            seeds=[PDA_WALLET_SEED, seed_guardian.key().as_ref()],
+            bump
+        )]
     pub wallet: AccountInfo<'info>,
 
-    #[account(
+    #[light_account(
+        init,
         seeds=[PDA_WALLET_GUARDIAN_SEED, wallet.key().as_ref(), guardian.key().as_ref()],
-        bump
     )]
-    pub wallet_guardian: Account<'info, WalletGuardian>,
+    pub wallet_guardian: LightAccount<WalletGuardian>,
 
     /// CHECK: we use this to determine the account we're invoking for.
     /// The actual access check happens using wallet_guardian.
@@ -212,26 +192,14 @@ pub struct ExecInstruction<'info> {
     pub guardian: Signer<'info>,
 
     #[account(mut)]
+    #[fee_payer]
     pub payer: Signer<'info>,
-
-    pub system_program: Program<'info, System>,
+    #[self_program]
+    pub self_program: Program<'info, crate::program::CompressedAaPoc>,
+    /// CHECK: Checked in light-system-program.
+    #[authority]
+    pub cpi_signer: AccountInfo<'info>,
 }
-
-#[account]
-pub struct WalletGuardian {
-    pub wallet: Pubkey,
-    pub guardian: Pubkey,
-}
-
-#[derive(Accounts)]
-pub struct TestTransaction<'info> {
-    /// CHECK: Just checking bro
-    #[account()]
-    pub signer: Signer<'info>,
-}
-
-#[derive(Accounts)]
-pub struct VerifyEcdsa {}
 
 #[error_code]
 pub enum AaError {
