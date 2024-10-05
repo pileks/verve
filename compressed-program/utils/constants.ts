@@ -7,6 +7,7 @@ import {
 } from "@lightprotocol/stateless.js";
 import { PublicKey, SystemProgram } from "@solana/web3.js";
 import { keccak_256 } from "@noble/hashes/sha3";
+
 export class AaPocConstants {
   static readonly programId: PublicKey = new PublicKey(
     "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
@@ -27,6 +28,7 @@ export class AaPocConstants {
     [Buffer.from("cpi_authority")],
     this.programId
   )[0];
+
   static lightAccounts() {
     return {
       cpiSigner: this.cpiSigner,
@@ -39,12 +41,14 @@ export class AaPocConstants {
       systemProgram: this.systemProgram,
     };
   }
+
   protected static createNewAddressOutputState(address: PublicKey) {
     return LightSystemProgram.createNewAddressOutputState(
       Array.from(address.toBytes()),
       this.programId
     );
   }
+
   protected static getNewAddressParams(
     addressSeed: Uint8Array,
     proof: CompressedProofWithContext
@@ -57,20 +61,29 @@ export class AaPocConstants {
       addressQueuePubkey:
         proof.nullifierQueues[proof.nullifierQueues.length - 1],
     };
+
     return addressParams;
   }
+
   static hashvToBn254FieldSizeBe(bytes: Uint8Array[]): Uint8Array {
     const hasher = keccak_256.create();
+
     for (const input of bytes) {
       hasher.update(input);
     }
+
     const hash = hasher.digest();
+
     hash[0] = 0;
+
     return hash;
   }
+
   static deriveSeed(seeds: Uint8Array[]): Uint8Array {
     const combinedSeeds: Uint8Array[] = [this.programId.toBytes(), ...seeds];
+
     const hash = this.hashvToBn254FieldSizeBe(combinedSeeds);
+
     return hash;
   }
 }
