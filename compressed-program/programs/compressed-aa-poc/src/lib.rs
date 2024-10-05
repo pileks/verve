@@ -3,7 +3,6 @@
 /// 👽👽👽👽👽👽👽👽👽
 /// VIVA LA ZK COMPRESSION
 /// 👽👽👽👽👽👽👽👽👽
-
 use anchor_lang::prelude::*;
 use light_sdk::{
     compressed_account::LightAccount, light_account, light_accounts, light_program,
@@ -21,6 +20,16 @@ pub mod compressed_aa_poc {
     use anchor_lang::solana_program::instruction::Instruction;
 
     use super::*;
+
+    pub fn test_transaction<'info>(
+        ctx: Context<'_, '_, '_, 'info, TestTransaction<'info>>,
+    ) -> Result<()> {
+        msg!("Test tx signer: {}", ctx.accounts.signer.key());
+
+        msg!("Hello World!");
+
+        Ok(())
+    }
 
     pub fn init_wallet<'info>(
         ctx: LightContext<'_, '_, '_, 'info, InitWallet<'info>>,
@@ -97,6 +106,13 @@ pub mod compressed_aa_poc {
 
         Ok(())
     }
+}
+
+#[derive(Accounts)]
+pub struct TestTransaction<'info> {
+    /// CHECK: Just checking bro
+    #[account()]
+    pub signer: Signer<'info>,
 }
 
 #[light_account]
