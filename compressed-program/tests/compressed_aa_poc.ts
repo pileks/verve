@@ -1,14 +1,6 @@
-import {
-  setProvider,
-  AnchorProvider,
-  workspace,
-  Provider,
-  getProvider,
-} from "@coral-xyz/anchor";
+import { setProvider, AnchorProvider, workspace } from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { CompressedAaPoc } from "../target/types/compressed_aa_poc";
-import { BN } from "bn.js";
-import { createMerkleContext } from "@lightprotocol/stateless.js";
 
 describe("token-escrow", () => {
   // Configure the client to use the local cluster.
@@ -18,7 +10,7 @@ describe("token-escrow", () => {
 
   it("Is initialized!", async () => {
     // Add your test here.
-    // const tx = await program.methods.initWallet().rpc();
+    // const tx = await program.methods.initWallet([] as Buffer[]).rpc();
     // console.log("Your transaction signature", tx);
   });
 });
