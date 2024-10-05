@@ -1233,8 +1233,8 @@ dependencies = [
  "light-client",
  "light-hasher",
  "light-macros",
- "light-sdk",
- "light-sdk-macros",
+ "light-sdk 0.11.0",
+ "light-sdk-macros 0.4.0",
  "light-test-utils",
  "light-utils",
  "light-verifier",
@@ -2582,7 +2582,7 @@ dependencies = [
  "light-indexed-merkle-tree",
  "light-merkle-tree-reference",
  "light-prover-client",
- "light-sdk",
+ "light-sdk 0.10.0",
  "log",
  "num-bigint 0.4.6",
  "num-traits",
@@ -2801,7 +2801,31 @@ dependencies = [
  "light-heap",
  "light-indexed-merkle-tree",
  "light-macros",
- "light-sdk-macros",
+ "light-sdk-macros 0.3.0",
+ "light-utils",
+ "light-verifier",
+ "num-bigint 0.4.6",
+ "solana-program",
+ "solana-sdk",
+]
+
+[[package]]
+name = "light-sdk"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c14007770c1de79cf9e1c8fcba6df563bd80cab959f59d7bbb1cc4e972be86f5"
+dependencies = [
+ "aligned-sized",
+ "anchor-lang",
+ "borsh 0.10.3",
+ "bytemuck",
+ "groth16-solana",
+ "light-concurrent-merkle-tree",
+ "light-hasher",
+ "light-heap",
+ "light-indexed-merkle-tree",
+ "light-macros",
+ "light-sdk-macros 0.4.0",
  "light-utils",
  "light-verifier",
  "num-bigint 0.4.6",
@@ -2814,6 +2838,19 @@ name = "light-sdk-macros"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f38c8f908e4fe074fdf6eb6c7b2702e0575435ce6f22dcb3ffea62283b2d7911"
+dependencies = [
+ "bs58 0.4.0",
+ "light-hasher",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.77",
+]
+
+[[package]]
+name = "light-sdk-macros"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d91a0e4002b8250f57d7f7f25db3d059fdbb268e84024c369af1110a3df3fea9"
 dependencies = [
  "bs58 0.4.0",
  "light-hasher",

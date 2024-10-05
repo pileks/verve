@@ -20,10 +20,10 @@ idl-build = ["anchor-lang/idl-build", "light-sdk/idl-build"]
 
 [dependencies]
 anchor-lang = "0.29.0"
-light-hasher = {version="1.1.0", features = ["solana"] }
+light-hasher = { version = "1.1.0", features = ["solana"] }
 light-macros = "1.1.0"
-light-sdk = "0.10.0"
-light-sdk-macros = "0.3.0" 
+light-sdk = "0.11.0"
+light-sdk-macros = "0.4.0"
 light-utils = "1.1.0"
 light-verifier = "1.1.0"
 
@@ -31,7 +31,7 @@ light-verifier = "1.1.0"
 solana-sdk = "1.18.22"
 
 [dev-dependencies]
-light-client ="0.9.1"
+light-client = "0.9.1"
 light-test-utils = "1.2.1"
 solana-program-test = "1.18.22"
 tokio = "1.36.0"
