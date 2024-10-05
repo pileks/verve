@@ -1,5 +1,5 @@
 /// 👽👽👽👽👽👽👽👽👽
-///     A Y Y  L M A O    
+/// A Y Y  L M A O    
 /// 👽👽👽👽👽👽👽👽👽
 /// VIVA LA ZK COMPRESSION
 /// 👽👽👽👽👽👽👽👽👽
@@ -34,7 +34,7 @@ pub mod compressed_aa_poc {
     pub fn init_wallet<'info>(
         ctx: LightContext<'_, '_, '_, 'info, InitWallet<'info>>,
     ) -> Result<()> {
-        ctx.light_accounts.wallet_guardian.guardian = ctx.accounts.wallet.key();
+        ctx.light_accounts.wallet_guardian.wallet = ctx.accounts.wallet.key();
         ctx.light_accounts.wallet_guardian.guardian = ctx.accounts.assign_guardian.key();
 
         msg!(
@@ -128,9 +128,9 @@ pub struct WalletGuardian {
 pub struct InitWallet<'info> {
     /// CHECK: No need to have this account initialized lol
     #[account(
-            seeds=[PDA_WALLET_SEED, assign_guardian.key().as_ref()],
-            bump
-        )]
+        seeds=[PDA_WALLET_SEED, assign_guardian.key().as_ref()],
+        bump
+    )]
     pub wallet: AccountInfo<'info>,
 
     #[light_account(
@@ -156,9 +156,9 @@ pub struct InitWallet<'info> {
 pub struct RegisterKeypair<'info> {
     /// CHECK: No need to have this account initialized lol
     #[account(
-            seeds=[PDA_WALLET_SEED, assign_guardian.key().as_ref()],
-            bump
-        )]
+        seeds=[PDA_WALLET_SEED, assign_guardian.key().as_ref()],
+        bump
+    )]
     pub wallet: AccountInfo<'info>,
 
     #[light_account(
@@ -188,9 +188,9 @@ pub struct RegisterKeypair<'info> {
 pub struct ExecInstruction<'info> {
     /// CHECK: No need to have this account initialized lol
     #[account(
-            seeds=[PDA_WALLET_SEED, seed_guardian.key().as_ref()],
-            bump
-        )]
+        seeds=[PDA_WALLET_SEED, seed_guardian.key().as_ref()],
+        bump
+    )]
     pub wallet: AccountInfo<'info>,
 
     #[light_account(
