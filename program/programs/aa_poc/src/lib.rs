@@ -31,6 +31,10 @@ pub mod aa_poc {
         Ok(())
     }
 
+    // pub fn test_transfer_token(ctx: Context<TestTransferToken>) -> Result<()> {
+    //     Ok(())
+    // }
+
     pub fn init_wallet(ctx: Context<InitWallet>) -> Result<()> {
         ctx.accounts.wallet_guardian.wallet = ctx.accounts.wallet.key();
         ctx.accounts.wallet_guardian.guardian = ctx.accounts.assign_guardian.key();
@@ -57,9 +61,12 @@ pub mod aa_poc {
         Ok(())
     }
 
-    pub fn exec_instruction(
-        ctx: Context<ExecInstruction>,
+    pub fn exec_instruction<'info>(
+        ctx: Context<'_, '_, '_, 'info, ExecInstruction<'info>>,
         instruction_data: Vec<u8>,
+        account_keys: Vec<Pubkey>,
+        is_writable_flags: Vec<bool>,
+        is_signer_flags: Vec<bool>,
     ) -> Result<()> {
         require!(
             ctx.accounts
@@ -80,8 +87,24 @@ pub mod aa_poc {
         msg!("Executing tx for AA wallet: {}", ctx.accounts.wallet.key());
         msg!("Tx approved by: {}", ctx.accounts.guardian.key());
 
+        let mut account_metas: Vec<AccountMeta> = vec![];
+        for (i, account_key) in account_keys.iter().enumerate() {
+            let is_writable = is_writable_flags.get(i).cloned().unwrap_or(false);
+            let is_signer = is_signer_flags.get(i).cloned().unwrap_or(false);
+
+            msg!("{} {}", is_writable, is_signer);
+
+            let account_meta = if is_writable {
+                AccountMeta::new(*account_key, is_signer)
+            } else {
+                AccountMeta::new_readonly(*account_key, is_signer)
+            };
+            // msg!("{:?}", account_meta);
+            account_metas.push(account_meta);
+        }
+
         let instruction = Instruction {
-            accounts: ctx.accounts.wallet.to_account_metas(Some(true)).to_vec(),
+            accounts: account_metas,
             data: instruction_data,
             program_id: ctx.remaining_accounts[0].key(),
         };
@@ -94,9 +117,18 @@ pub mod aa_poc {
         ];
         let signer_seeds = &[&seeds[..]];
 
+        // Convert ctx.remaining_accounts to a vector
+        let mut all_accounts: Vec<AccountInfo<'info>> = ctx.remaining_accounts.to_vec();
+
+        // Clone the account info and push it to the vector
+        all_accounts.push(ctx.accounts.wallet.clone());
+
+        // msg!("ALL ACCOUNTS");
+        // msg!("{:?}", all_accounts);
+
         anchor_lang::solana_program::program::invoke_signed(
             &instruction,
-            &[ctx.accounts.wallet.to_account_info()],
+            &all_accounts,
             signer_seeds,
         )?;
 
@@ -229,6 +261,15 @@ pub struct TestTransaction<'info> {
     #[account()]
     pub signer: Signer<'info>,
 }
+
+// #[derive(Accounts)]
+// pub struct TestTransferToken<'info> {
+//     #[account(mut, associated_token::mint=token_mint, associated_token::authority=signer)]
+//     pub user_ata: Account<'info, TokenAccount>,
+
+//     #[account(mut, associated_token::mint=token_mint, associated_token::authority=signer)]
+//     pub user_ata: Account<'info, TokenAccount>,
+// }
 
 #[derive(Accounts)]
 pub struct VerifyEcdsa {}
