@@ -39,6 +39,7 @@ export class CompressedAaPocProgram extends AaPocConstants {
     if (!CompressedAaPocProgram.instance) {
       CompressedAaPocProgram.instance = new CompressedAaPocProgram();
     }
+
     return CompressedAaPocProgram.instance;
   }
 
@@ -46,22 +47,27 @@ export class CompressedAaPocProgram extends AaPocConstants {
     if (!this._program) {
       this.initializeProgram();
     }
+
     return this._program!;
   }
 
   private initializeProgram(): void {
     if (!this._program) {
       const mockKeypair = Keypair.generate();
+
       const mockConnection = new Connection(
         "http://127.0.0.1:8899",
         "confirmed"
       );
+
       const mockProvider = new AnchorProvider(
         mockConnection,
         useWallet(mockKeypair),
         confirmConfig
       );
+
       setProvider(mockProvider);
+
       this._program = new Program(
         idl as CompressedAaPoc,
         CompressedAaPocProgram.programId,
@@ -95,15 +101,18 @@ export class CompressedAaPocProgram extends AaPocConstants {
       proof.rootIndices,
       outputCompressedAccounts
     );
+
     const { newAddressParamsPacked, remainingAccounts } = packNewAddressParams(
       newAddressesParams,
       _remainingAccounts
     );
+
     let {
       addressMerkleTreeAccountIndex,
       addressMerkleTreeRootIndex,
       addressQueueAccountIndex,
     } = newAddressParamsPacked[0];
+
     let { rootIndex, merkleContext } = packedInputCompressedAccounts[0];
 
     return {
@@ -128,15 +137,18 @@ export class CompressedAaPocProgram extends AaPocConstants {
       proof.rootIndices,
       outputCompressedAccounts
     );
+
     const { newAddressParamsPacked, remainingAccounts } = packNewAddressParams(
       newAddressesParams,
       _remainingAccounts
     );
+
     let {
       addressMerkleTreeAccountIndex,
       addressMerkleTreeRootIndex,
       addressQueueAccountIndex,
     } = newAddressParamsPacked[0];
+
     let merkleContext: PackedMerkleContext = {
       leafIndex: 0,
       merkleTreePubkeyIndex: getIndexOrAdd(remainingAccounts, this.merkleTree),
@@ -146,6 +158,7 @@ export class CompressedAaPocProgram extends AaPocConstants {
       ),
       queueIndex: null,
     };
+
     return {
       addressMerkleContext: {
         addressMerkleTreePubkeyIndex: addressMerkleTreeAccountIndex,
