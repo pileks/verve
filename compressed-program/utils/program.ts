@@ -27,6 +27,7 @@ import {
   PackedMerkleContext,
   packNewAddressParams,
   Rpc,
+  toAccountMetas,
   useWallet,
 } from "@lightprotocol/stateless.js";
 import idl from "../target/idl/compressed_aa_poc.json";
@@ -133,15 +134,21 @@ export class CompressedAaPocProgram extends AaPocConstants {
 
     const ix = await CompressedAaPocProgram.getInstance()
       .program.methods.initWallet(
-        [],
-        proof.compressedProof,
-        merkleContext,
-        0,
-        addressMerkleContext,
-        addressMerkleTreeRootIndex
+        [], // inputs
+        proof.compressedProof, //proof
+        merkleContext, // merkleContext
+        0, //merkleTreeRootIndex
+        addressMerkleContext, // addressMerkleContext
+        addressMerkleTreeRootIndex // addressMerkleTreeRootIndex
       )
       .accounts({ ...this.lightAccounts() })
+      .remainingAccounts(toAccountMetas(remainingAccounts))
       .instruction();
+
+    return {
+      instruction: ix,
+      walletGuardianAddress,
+    };
   }
 
   private static packWithInput(
