@@ -6,7 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-compressed_aa_poc = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+compressed_aa_poc = "Y3Fdm2T4ipYdaFBKxQb8M4QE8EgpxWAMa7c3q72vQhn"
 
 [registry]
 url = "https://api.apr.dev"

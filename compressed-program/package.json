@@ -1,8 +1,11 @@
 {
   "license": "ISC",
   "scripts": {
-    "build": "anchor build",
-    "test": "anchor test",
+    "build": "yarn copy-keypairs && anchor build",
+    "test": "yarn copy-keypairs && anchor test --skip-local-validator",
+    "light-start": "light test-validator",
+    "light-kill": "light test-validator --stop",
+    "copy-keypairs": "mkdir -p target/deploy && cp test-keys/compressed_aa_poc-keypair.json target/deploy/compressed_aa_poc-keypair.json",
     "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
     "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check"
   },

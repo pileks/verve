@@ -16,6 +16,18 @@ The base program exists merely as a simpler way to test new features, before mer
 
 Swen, give us a `#[light_instruction]` macro pls bro.
 
+### Run ZK Compression examples
+
+You need to have `@lightprotocol/zk-compression-cli`, version `0.19.0` installed globally.
+
+```
+cd compressed-program
+yarn
+yarn light-start
+yarn test
+yarn light-kill
+```
+
 ## How to run this
 
 1. In one terminal, start a **fresh** local Solana validator:

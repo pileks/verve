@@ -9,7 +9,7 @@ use light_sdk::{
     merkle_context::PackedAddressMerkleContext,
 };
 
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+declare_id!("Y3Fdm2T4ipYdaFBKxQb8M4QE8EgpxWAMa7c3q72vQhn");
 
 const PDA_WALLET_SEED: &[u8; 1] = b"w";
 const PDA_WALLET_GUARDIAN_SEED: &[u8; 2] = b"wg";

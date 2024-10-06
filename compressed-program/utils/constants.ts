@@ -10,7 +10,7 @@ import { keccak_256 } from "@noble/hashes/sha3";
 
 export class AaPocConstants {
   static readonly programId: PublicKey = new PublicKey(
-    "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+    "Y3Fdm2T4ipYdaFBKxQb8M4QE8EgpxWAMa7c3q72vQhn"
   );
   static readonly accountCompressionAuthority =
     staticAccounts().accountCompressionAuthority;
