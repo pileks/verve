@@ -4,9 +4,14 @@ import {
   getProvider,
   Wallet,
 } from "@coral-xyz/anchor";
-import { createRpc, Rpc, sendAndConfirmTx } from "@lightprotocol/stateless.js";
+import {
+  airdropSol,
+  createRpc,
+  Rpc,
+  sendAndConfirmTx,
+} from "@lightprotocol/stateless.js";
 import { CompressedAaPocProgram } from "../utils/program";
-import { PublicKey } from "@solana/web3.js";
+import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 
 describe("token-escrow", () => {
   // Configure the client to use the local cluster.
@@ -22,6 +27,12 @@ describe("token-escrow", () => {
   let createdWalletGuardianAddress: PublicKey;
 
   it("init wallet", async () => {
+    await airdropSol({
+      connection: rpc,
+      lamports: 100 * LAMPORTS_PER_SOL,
+      recipientPublicKey: wallet.payer.publicKey,
+    });
+
     const { transaction, walletGuardianAddress } =
       await CompressedAaPocProgram.initWalletTx(rpc, wallet.publicKey);
 
