@@ -82,7 +82,28 @@ export class CompressedAaPocProgram extends AaPocConstants {
     }
   }
 
-  static async initWalletIx(rpc: Rpc, assignGuardian: PublicKey) {
+  static async initWalletTx(
+    rpc: Rpc,
+    assignGuardian: PublicKey
+  ): Promise<{
+    transaction: VersionedTransaction;
+    walletGuardianAddress: PublicKey;
+  }> {
+    const { instruction, walletGuardianAddress } = await this.initWalletIx(
+      rpc,
+      assignGuardian
+    );
+
+    const tx = await this.buildTxWithComputeBudget(
+      rpc,
+      [instruction],
+      assignGuardian
+    );
+
+    return { transaction: tx, walletGuardianAddress };
+  }
+
+  private static async initWalletIx(rpc: Rpc, assignGuardian: PublicKey) {
     const wallet = this.deriveWalletAddress(assignGuardian);
 
     const walletGuardianSeed = this.deriveWalletGuardianSeed(
@@ -90,7 +111,7 @@ export class CompressedAaPocProgram extends AaPocConstants {
       assignGuardian
     );
 
-    const walletGuardianAddress: PublicKey = await deriveAddress(
+    const walletGuardianAddress: PublicKey = deriveAddress(
       walletGuardianSeed,
       this.addressTree
     );
@@ -120,9 +141,9 @@ export class CompressedAaPocProgram extends AaPocConstants {
     );
 
     console.log(
-      newUniqueAddresses.length,
-      outputCompressedAccounts.length,
-      newAddressesParams.length
+      `newUniqueAddresses length: ${newUniqueAddresses.length}`,
+      `outputCompressedAccounts length: ${outputCompressedAccounts.length}`,
+      `newAddressesParams length: ${newAddressesParams.length}`
     );
 
     const {
@@ -135,13 +156,17 @@ export class CompressedAaPocProgram extends AaPocConstants {
     const ix = await CompressedAaPocProgram.getInstance()
       .program.methods.initWallet(
         [], // inputs
-        proof.compressedProof, //proof
+        proof.compressedProof, // proof
         merkleContext, // merkleContext
-        0, //merkleTreeRootIndex
+        0, // merkleTreeRootIndex
         addressMerkleContext, // addressMerkleContext
         addressMerkleTreeRootIndex // addressMerkleTreeRootIndex
       )
-      .accounts({ ...this.lightAccounts() })
+      .accounts({
+        payer: assignGuardian,
+        assignGuardian: assignGuardian,
+        ...this.lightAccounts(),
+      })
       .remainingAccounts(toAccountMetas(remainingAccounts))
       .instruction();
 
