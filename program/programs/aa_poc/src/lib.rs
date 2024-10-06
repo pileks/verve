@@ -11,7 +11,7 @@ const CHALLENGE: &[u8] = b"Hello!";
 
 /// PDA derivation
 /// wallet: PDA_WALLET_SEED, original_guardian_pubkey
-/// wallet_guardian: PDA_WALLET_GUARDIAN_SEED, wallet, guardian_pubkey(original or new, depending on situation)
+/// wallet_guardian: PDA_WALLET_GUARDIAN_SEED, wallet, guardian_pubkey(original or any other)
 
 #[program]
 pub mod aa_poc {
@@ -30,10 +30,6 @@ pub mod aa_poc {
 
         Ok(())
     }
-
-    // pub fn test_transfer_token(ctx: Context<TestTransferToken>) -> Result<()> {
-    //     Ok(())
-    // }
 
     pub fn init_wallet(ctx: Context<InitWallet>) -> Result<()> {
         ctx.accounts.wallet_guardian.wallet = ctx.accounts.wallet.key();
@@ -84,22 +80,23 @@ pub mod aa_poc {
             AaError::GuardianMismatch
         );
 
-        msg!("Executing tx for AA wallet: {}", ctx.accounts.wallet.key());
-        msg!("Tx approved by: {}", ctx.accounts.guardian.key());
+        msg!(
+            "Executing ix for AA wallet {} approved by {}",
+            ctx.accounts.wallet.key(),
+            ctx.accounts.guardian.key()
+        );
 
         let mut account_metas: Vec<AccountMeta> = vec![];
         for (i, account_key) in account_keys.iter().enumerate() {
             let is_writable = is_writable_flags.get(i).cloned().unwrap_or(false);
             let is_signer = is_signer_flags.get(i).cloned().unwrap_or(false);
 
-            msg!("{} {}", is_writable, is_signer);
-
             let account_meta = if is_writable {
                 AccountMeta::new(*account_key, is_signer)
             } else {
                 AccountMeta::new_readonly(*account_key, is_signer)
             };
-            // msg!("{:?}", account_meta);
+
             account_metas.push(account_meta);
         }
 
@@ -117,18 +114,13 @@ pub mod aa_poc {
         ];
         let signer_seeds = &[&seeds[..]];
 
-        // Convert ctx.remaining_accounts to a vector
-        let mut all_accounts: Vec<AccountInfo<'info>> = ctx.remaining_accounts.to_vec();
-
-        // Clone the account info and push it to the vector
-        all_accounts.push(ctx.accounts.wallet.clone());
-
-        // msg!("ALL ACCOUNTS");
-        // msg!("{:?}", all_accounts);
+        // The 1st account in remaining_accounts is the program ID of the IX we're calling
+        // we don't need that.
+        let cpi_accounts: Vec<AccountInfo<'info>> = ctx.remaining_accounts[1..].to_vec();
 
         anchor_lang::solana_program::program::invoke_signed(
             &instruction,
-            &all_accounts,
+            &cpi_accounts,
             signer_seeds,
         )?;
 
@@ -243,9 +235,6 @@ pub struct ExecInstruction<'info> {
     #[account()]
     pub guardian: Signer<'info>,
 
-    #[account(mut)]
-    pub payer: Signer<'info>,
-
     pub system_program: Program<'info, System>,
 }
 
@@ -261,15 +250,6 @@ pub struct TestTransaction<'info> {
     #[account()]
     pub signer: Signer<'info>,
 }
-
-// #[derive(Accounts)]
-// pub struct TestTransferToken<'info> {
-//     #[account(mut, associated_token::mint=token_mint, associated_token::authority=signer)]
-//     pub user_ata: Account<'info, TokenAccount>,
-
-//     #[account(mut, associated_token::mint=token_mint, associated_token::authority=signer)]
-//     pub user_ata: Account<'info, TokenAccount>,
-// }
 
 #[derive(Accounts)]
 pub struct VerifyEcdsa {}

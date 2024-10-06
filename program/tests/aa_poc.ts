@@ -11,14 +11,12 @@ import elliptic from "elliptic";
 import keccak from "keccak";
 import {
   createMint,
-  createAccount,
   getOrCreateAssociatedTokenAccount,
   mintTo,
   getAccount,
   createTransferInstruction,
 } from "@solana/spl-token";
 import { assert } from "chai";
-import { publicKey } from "@coral-xyz/anchor/dist/cjs/utils";
 
 describe("aa_poc", () => {
   // Configure the client to use the local cluster.
@@ -106,12 +104,28 @@ describe("aa_poc", () => {
     return PublicKey.findProgramAddressSync(seeds, program.programId);
   }
 
+  function getAccountsWritablesSignersForInstruction(
+    transferIx: anchor.web3.TransactionInstruction
+  ) {
+    const accounts: PublicKey[] = [];
+    const writables: boolean[] = [];
+    const signers: boolean[] = [];
+
+    for (let accountMeta of transferIx.keys) {
+      accounts.push(accountMeta.pubkey);
+      writables.push(accountMeta.isWritable);
+      signers.push(accountMeta.isSigner);
+    }
+
+    return { accounts, writables, signers };
+  }
+
   before(async () => {
     // This is our tx sponsor, let's give him some cash.
     await airdropSol(sponsor.publicKey, 100);
   });
 
-  it.skip("ECDSA Auth", async () => {
+  it("secp256k1 auth", async () => {
     const ec = new elliptic.ec("secp256k1");
 
     const key = ec.genKeyPair();
@@ -136,15 +150,7 @@ describe("aa_poc", () => {
     console.log(result.meta.logMessages);
   });
 
-  it.skip("Init wallet", async () => {
-    const initTx = await program.methods
-      .initWallet()
-      .accounts({ assignGuardian: primaryGuardian.publicKey })
-      .transaction();
-    await sendWithPayer(initTx, sponsor, primaryGuardian);
-  });
-
-  it.skip("AA Demo", async () => {
+  it("AA Demo", async () => {
     console.log("Provider: ", provider.publicKey.toBase58());
     console.log("Sponsor: ", sponsor.publicKey.toBase58());
     console.log("Hotwallet: ", primaryGuardian.publicKey.toBase58());
@@ -174,6 +180,9 @@ describe("aa_poc", () => {
 
     const testIx = await program.methods.testTransaction().instruction();
 
+    const { accounts, signers, writables } =
+      getAccountsWritablesSignersForInstruction(testIx);
+
     const [walletPdaPubkey, _] = getAbstractWalletAddressBumps(
       primaryGuardian.publicKey
     );
@@ -181,14 +190,18 @@ describe("aa_poc", () => {
     // Exec as primary
     console.log("Executing as primary guardian...");
     const execPrimaryTx = await program.methods
-      .execInstruction(testIx.data, [walletPdaPubkey], [true], [true])
+      .execInstruction(testIx.data, accounts, writables, signers)
       .accounts({
-        payer: sponsor.publicKey,
         guardian: primaryGuardian.publicKey,
         seedGuardian: primaryGuardian.publicKey,
       })
       .remainingAccounts([
         { isSigner: false, isWritable: false, pubkey: program.programId },
+        ...testIx.keys.map((x) => ({
+          isSigner: false,
+          isWritable: x.isWritable,
+          pubkey: x.pubkey,
+        })),
       ])
       .transaction();
 
@@ -204,14 +217,18 @@ describe("aa_poc", () => {
     // Exec as secondary
     console.log("Executing as secondary guardian...");
     const execSecondaryTx = await program.methods
-      .execInstruction(testIx.data, [walletPdaPubkey], [true], [true])
+      .execInstruction(testIx.data, accounts, writables, signers)
       .accounts({
-        payer: sponsor.publicKey,
         guardian: secondaryGuardian.publicKey,
         seedGuardian: primaryGuardian.publicKey,
       })
       .remainingAccounts([
         { isSigner: false, isWritable: false, pubkey: program.programId },
+        ...testIx.keys.map((x) => ({
+          isSigner: false,
+          isWritable: x.isWritable,
+          pubkey: x.pubkey,
+        })),
       ])
       .transaction();
 
@@ -236,7 +253,7 @@ describe("aa_poc", () => {
    * without ever initializing the underlying PDA.
    * A little bit of protocol abuse never hurt anyone...
    */
-  it.skip("Airdrop token into nonexistent PDA", async () => {
+  it("Airdrop token into nonexistent PDA", async () => {
     // we're simulating how we would derive a wallet PDA, just for the lols
     const [pdaPubkey, _] = getAbstractWalletAddressBumps(
       new Keypair().publicKey
@@ -367,8 +384,6 @@ describe("aa_poc", () => {
       50_000_000
     );
 
-    console.log(transferIx.keys);
-
     const accounts: PublicKey[] = [];
     const is_writables: boolean[] = [];
     const is_signers: boolean[] = [];
@@ -382,7 +397,6 @@ describe("aa_poc", () => {
     const execTransferTokensTx = await program.methods
       .execInstruction(transferIx.data, accounts, is_writables, is_signers)
       .accounts({
-        payer: sponsor.publicKey,
         guardian: guardian1.publicKey,
         seedGuardian: guardian1.publicKey,
       })
@@ -396,8 +410,6 @@ describe("aa_poc", () => {
       ])
       .transaction();
 
-    // console.log(execTransferTokensTx.instructions[0].keys);
-
     const transferTokensTx = await sendWithPayer(
       execTransferTokensTx,
       sponsor,
@@ -406,5 +418,13 @@ describe("aa_poc", () => {
 
     console.log("LOGS:");
     console.log(transferTokensTx.meta.logMessages);
+
+    const pdaTokenAccountInfo = await getAccount(
+      provider.connection,
+      wallet2Ata.address
+    );
+
+    // Assert that the transaction succeeded
+    assert.equal(pdaTokenAccountInfo.amount, BigInt(50_000_000));
   });
 });
