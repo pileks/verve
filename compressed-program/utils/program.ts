@@ -1,6 +1,10 @@
 import { AnchorProvider, BN, Program, setProvider } from "@coral-xyz/anchor";
 import { CompressedAaPoc } from "../target/types/compressed_aa_poc";
-import { AaPocConstants } from "./constants";
+import {
+  AaPocConstants,
+  PDA_WALLET_GUARDIAN_SEED,
+  PDA_WALLET_SEED,
+} from "./constants";
 import {
   ComputeBudgetProgram,
   Connection,
@@ -16,6 +20,7 @@ import {
   CompressedAccountWithMerkleContext,
   CompressedProofWithContext,
   confirmConfig,
+  deriveAddress,
   getIndexOrAdd,
   NewAddressParams,
   packCompressedAccounts,
@@ -76,13 +81,65 @@ export class CompressedAaPocProgram extends AaPocConstants {
     }
   }
 
-  static async initWalletIx(rpc: Rpc, payer: PublicKey) {
-    const derivationKey = new Keypair().publicKey;
+  static async initWalletIx(rpc: Rpc, assignGuardian: PublicKey) {
+    const wallet = this.deriveWalletAddress(assignGuardian);
 
-    const walletSeed = this.deriveWalletSeed(derivationKey);
+    const walletGuardianSeed = this.deriveWalletGuardianSeed(
+      wallet,
+      assignGuardian
+    );
+
+    const walletGuardianAddress: PublicKey = await deriveAddress(
+      walletGuardianSeed,
+      this.addressTree
+    );
+
+    console.log("walletGuardianAddress: ", walletGuardianAddress);
+
+    const newUniqueAddresses: PublicKey[] = [];
+
+    newUniqueAddresses.push(walletGuardianAddress);
+
+    const proof = await this.getValidityProof(
+      rpc,
+      undefined,
+      newUniqueAddresses
+    );
+
+    const newAddressesParams: NewAddressParams[] = [];
+
+    newAddressesParams.push(
+      this.getNewAddressParams(walletGuardianSeed, proof)
+    );
+
+    const outputCompressedAccounts: CompressedAccount[] = [];
+
+    outputCompressedAccounts.push(
+      ...this.createNewAddressOutputState(walletGuardianAddress)
+    );
+
+    console.log(
+      newUniqueAddresses.length,
+      outputCompressedAccounts.length,
+      newAddressesParams.length
+    );
+
+    const {
+      addressMerkleContext,
+      addressMerkleTreeRootIndex,
+      merkleContext,
+      remainingAccounts,
+    } = this.packNew(outputCompressedAccounts, newAddressesParams, proof);
 
     const ix = await CompressedAaPocProgram.getInstance()
-      .program.methods.initWallet()
+      .program.methods.initWallet(
+        [],
+        proof.compressedProof,
+        merkleContext,
+        0,
+        addressMerkleContext,
+        addressMerkleTreeRootIndex
+      )
       .accounts({ ...this.lightAccounts() })
       .instruction();
   }
@@ -178,6 +235,24 @@ export class CompressedAaPocProgram extends AaPocConstants {
     const outputHashes = newUniqueAddresses?.map((addr) => bn(addr.toBytes()));
 
     return await rpc.getValidityProof(inputHashes, outputHashes);
+  }
+
+  static deriveWalletAddress(assignGuardian: PublicKey): PublicKey {
+    return PublicKey.findProgramAddressSync(
+      [PDA_WALLET_SEED, assignGuardian.toBytes()],
+      this.programId
+    )[0];
+  }
+
+  static deriveWalletGuardianSeed(
+    wallet: PublicKey,
+    assignGuardian: PublicKey
+  ): Uint8Array {
+    return this.deriveSeed([
+      PDA_WALLET_GUARDIAN_SEED,
+      wallet.toBytes(),
+      assignGuardian.toBytes(),
+    ]);
   }
 
   static async buildTxWithComputeBudget(
