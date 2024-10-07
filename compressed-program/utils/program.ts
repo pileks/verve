@@ -1,5 +1,6 @@
 import { AnchorProvider, BN, Program, setProvider } from "@coral-xyz/anchor";
 import { CompressedAaPoc } from "../target/types/compressed_aa_poc";
+import { WalletGuardian } from "./types";
 import {
   AaPocConstants,
   PDA_WALLET_GUARDIAN_SEED,
@@ -31,8 +32,6 @@ import {
   useWallet,
 } from "@lightprotocol/stateless.js";
 import idl from "../target/idl/compressed_aa_poc.json";
-
-
 
 export class CompressedAaPocProgram extends AaPocConstants {
   private static instance: CompressedAaPocProgram;
@@ -105,6 +104,26 @@ export class CompressedAaPocProgram extends AaPocConstants {
     return { transaction: tx, walletGuardianAddress };
   }
 
+  static async registerKeypairTx(
+    rpc: Rpc,
+    seedGuardian: PublicKey,
+    assignGuardian: PublicKey
+  ) {
+    const { instruction, walletGuardianAddress } = await this.registerKeypairIx(
+      rpc,
+      seedGuardian,
+      assignGuardian
+    );
+
+    const tx = await this.buildTxWithComputeBudget(
+      rpc,
+      [instruction],
+      seedGuardian
+    );
+
+    return { transaction: tx, walletGuardianAddress };
+  }
+
   private static async initWalletIx(rpc: Rpc, assignGuardian: PublicKey) {
     const wallet = this.deriveWalletAddress(assignGuardian);
 
@@ -166,6 +185,88 @@ export class CompressedAaPocProgram extends AaPocConstants {
       )
       .accounts({
         payer: assignGuardian,
+        assignGuardian: assignGuardian,
+        wallet: wallet,
+        ...this.lightAccounts(),
+      })
+      .remainingAccounts(toAccountMetas(remainingAccounts))
+      .instruction();
+
+    return {
+      instruction: ix,
+      walletGuardianAddress,
+    };
+  }
+
+  private static async registerKeypairIx(
+    rpc: Rpc,
+    seedGuardian: PublicKey,
+    assignGuardian: PublicKey
+  ) {
+    const wallet = this.deriveWalletAddress(seedGuardian);
+
+    const walletGuardianSeed = this.deriveWalletGuardianSeed(
+      wallet,
+      assignGuardian
+    );
+
+    const walletGuardianAddress: PublicKey = deriveAddress(
+      walletGuardianSeed,
+      this.addressTree
+    );
+
+    console.log(
+      "new walletGuardianAddress: ",
+      walletGuardianAddress.toBase58()
+    );
+
+    const newUniqueAddresses: PublicKey[] = [];
+
+    newUniqueAddresses.push(walletGuardianAddress);
+
+    const proof = await this.getValidityProof(
+      rpc,
+      undefined,
+      newUniqueAddresses
+    );
+
+    const newAddressesParams: NewAddressParams[] = [];
+
+    newAddressesParams.push(
+      this.getNewAddressParams(walletGuardianSeed, proof)
+    );
+
+    const outputCompressedAccounts: CompressedAccount[] = [];
+
+    outputCompressedAccounts.push(
+      ...this.createNewAddressOutputState(walletGuardianAddress)
+    );
+
+    console.log(
+      `newUniqueAddresses length: ${newUniqueAddresses.length}`,
+      `outputCompressedAccounts length: ${outputCompressedAccounts.length}`,
+      `newAddressesParams length: ${newAddressesParams.length}`
+    );
+
+    const {
+      addressMerkleContext,
+      addressMerkleTreeRootIndex,
+      merkleContext,
+      remainingAccounts,
+    } = this.packNew(outputCompressedAccounts, newAddressesParams, proof);
+
+    const ix = await CompressedAaPocProgram.getInstance()
+      .program.methods.registerKeypair(
+        [], // inputs
+        proof.compressedProof, // proof
+        merkleContext, // merkleContext
+        0, // merkleTreeRootIndex
+        addressMerkleContext, // addressMerkleContext
+        addressMerkleTreeRootIndex // addressMerkleTreeRootIndex
+      )
+      .accounts({
+        payer: seedGuardian,
+        seedGuardian: seedGuardian,
         assignGuardian: assignGuardian,
         wallet: wallet,
         ...this.lightAccounts(),
@@ -272,6 +373,20 @@ export class CompressedAaPocProgram extends AaPocConstants {
     return await rpc.getValidityProof(inputHashes, outputHashes);
   }
 
+  static async getWalletGuardianAccountData(
+    rpc: Rpc,
+    walletGuardianAccountAddress: PublicKey
+  ): Promise<WalletGuardian> {
+    const walletGuardianAccount = await rpc.getCompressedAccount(
+      new BN(walletGuardianAccountAddress.toBytes())
+    );
+
+    return this.decodeTypes<WalletGuardian>(
+      "WalletGuardian",
+      walletGuardianAccount.data.data
+    );
+  }
+
   static deriveWalletAddress(assignGuardian: PublicKey): PublicKey {
     return PublicKey.findProgramAddressSync(
       [PDA_WALLET_SEED, assignGuardian.toBytes()],
@@ -288,6 +403,13 @@ export class CompressedAaPocProgram extends AaPocConstants {
       wallet.toBytes(),
       assignGuardian.toBytes(),
     ]);
+  }
+
+  static decodeTypes<T>(typeName: string, data: Buffer) {
+    return CompressedAaPocProgram.getInstance().program.coder.types.decode<T>(
+      typeName,
+      data
+    );
   }
 
   static async buildTxWithComputeBudget(

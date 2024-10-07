@@ -149,8 +149,10 @@ pub struct InitWallet<'info> {
     #[account(mut)]
     #[fee_payer]
     pub payer: Signer<'info>,
+
     #[self_program]
     pub self_program: Program<'info, crate::program::CompressedAaPoc>,
+
     /// CHECK: Checked in light-system-program.
     #[authority]
     pub cpi_signer: AccountInfo<'info>,
@@ -181,8 +183,10 @@ pub struct RegisterKeypair<'info> {
     #[account(mut)]
     #[fee_payer]
     pub payer: Signer<'info>,
+
     #[self_program]
     pub self_program: Program<'info, crate::program::CompressedAaPoc>,
+
     /// CHECK: Checked in light-system-program.
     #[authority]
     pub cpi_signer: AccountInfo<'info>,
@@ -214,8 +218,10 @@ pub struct ExecInstruction<'info> {
     #[account(mut)]
     #[fee_payer]
     pub payer: Signer<'info>,
+
     #[self_program]
     pub self_program: Program<'info, crate::program::CompressedAaPoc>,
+
     /// CHECK: Checked in light-system-program.
     #[authority]
     pub cpi_signer: AccountInfo<'info>,

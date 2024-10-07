@@ -11,7 +11,8 @@ import {
   sendAndConfirmTx,
 } from "@lightprotocol/stateless.js";
 import { CompressedAaPocProgram } from "../utils/program";
-import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
+import { Keypair, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
+import { assert, expect } from "chai";
 
 describe("token-escrow", () => {
   // Configure the client to use the local cluster.
@@ -24,7 +25,8 @@ describe("token-escrow", () => {
     commitment: "confirmed",
   });
 
-  let createdWalletGuardianAddress: PublicKey;
+  let seedGuardianAddress: PublicKey;
+  let walletPdaPubkey: PublicKey;
 
   it("init wallet", async () => {
     await airdropSol({
@@ -52,10 +54,72 @@ describe("token-escrow", () => {
 
     console.log("messages: ", log.meta.logMessages);
 
-    createdWalletGuardianAddress = walletGuardianAddress;
+    seedGuardianAddress = walletGuardianAddress;
+
+    const walletGuardianData =
+      await CompressedAaPocProgram.getWalletGuardianAccountData(
+        rpc,
+        walletGuardianAddress
+      );
+
+    const derrivedWallet = CompressedAaPocProgram.deriveWalletAddress(
+      wallet.publicKey
+    );
+
+    expect(walletGuardianData.guardian).to.deep.eq(wallet.publicKey);
+    expect(walletGuardianData.wallet).to.deep.eq(derrivedWallet);
+
+    walletPdaPubkey = derrivedWallet;
   });
 
-  it("register keypair", async () => {});
+  it("register keypair", async () => {
+    const assignGuardian = new Keypair().publicKey;
+
+    await airdropSol({
+      connection: rpc,
+      lamports: 100 * LAMPORTS_PER_SOL,
+      recipientPublicKey: assignGuardian,
+    });
+
+    const { transaction, walletGuardianAddress } =
+      await CompressedAaPocProgram.registerKeypairTx(
+        rpc,
+        wallet.publicKey,
+        assignGuardian
+      );
+
+    transaction.sign([wallet.payer]);
+
+    const signature = await sendAndConfirmTx(rpc, transaction, {
+      skipPreflight: true,
+      commitment: "confirmed",
+    });
+
+    const log = await rpc.getTransaction(signature, {
+      commitment: "confirmed",
+      maxSupportedTransactionVersion: 0,
+    });
+
+    console.log("signature: ", signature);
+
+    console.log("messages: ", log.meta.logMessages);
+
+    seedGuardianAddress = walletGuardianAddress;
+
+    const walletGuardianData =
+      await CompressedAaPocProgram.getWalletGuardianAccountData(
+        rpc,
+        walletGuardianAddress
+      );
+
+    const derrivedWallet = CompressedAaPocProgram.deriveWalletAddress(
+      wallet.publicKey
+    );
+
+    expect(walletGuardianData.guardian).to.deep.eq(assignGuardian);
+    expect(walletGuardianData.wallet).to.deep.eq(walletPdaPubkey);
+    expect(derrivedWallet).to.deep.eq(walletPdaPubkey);
+  });
 
   it("exec instruction", async () => {});
 });
