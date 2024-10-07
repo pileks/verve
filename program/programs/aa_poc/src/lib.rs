@@ -77,16 +77,17 @@ pub mod aa_poc {
                 .wallet
                 .key()
                 .eq(&ctx.accounts.wallet_guardian.wallet.key()),
-            AaError::GuardianMismatch
+            AaError::WalletMismatch
         );
 
         msg!(
-            "Executing ix for AA wallet {} approved by {}",
+            "Executing ix for AA wallet {}, approved by: {}",
             ctx.accounts.wallet.key(),
             ctx.accounts.guardian.key()
         );
 
         let mut account_metas: Vec<AccountMeta> = vec![];
+
         for (i, account_key) in account_keys.iter().enumerate() {
             let is_writable = is_writable_flags.get(i).cloned().unwrap_or(false);
             let is_signer = is_signer_flags.get(i).cloned().unwrap_or(false);
@@ -107,11 +108,13 @@ pub mod aa_poc {
         };
 
         let seed_guardian_key = ctx.accounts.seed_guardian.key();
+
         let seeds = [
             &PDA_WALLET_SEED[..],
             seed_guardian_key.as_ref(),
             &[ctx.bumps.wallet][..],
         ];
+
         let signer_seeds = &[&seeds[..]];
 
         // The 1st account in remaining_accounts is the program ID of the IX we're calling
@@ -258,12 +261,16 @@ pub struct VerifyEcdsa {}
 pub enum AaError {
     #[msg("Guardian mismatch")]
     GuardianMismatch,
+
     #[msg("Wallet mismatch")]
     WalletMismatch,
+
     #[msg("Invalid token")]
     InvalidToken,
+
     #[msg("Invalid algorithm")]
     InvalidAlgorithm,
+
     #[msg("Invalid signature")]
     InvalidSignature,
 }
