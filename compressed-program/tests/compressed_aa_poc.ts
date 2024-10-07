@@ -27,14 +27,23 @@ describe("token-escrow", () => {
 
   let seedGuardianAddress: PublicKey;
   let walletPdaPubkey: PublicKey;
+  const assignGuardian = new Keypair();
 
-  it("init wallet", async () => {
+  before(async () => {
     await airdropSol({
       connection: rpc,
       lamports: 100 * LAMPORTS_PER_SOL,
       recipientPublicKey: wallet.payer.publicKey,
     });
 
+    await airdropSol({
+      connection: rpc,
+      lamports: 100 * LAMPORTS_PER_SOL,
+      recipientPublicKey: assignGuardian.publicKey,
+    });
+  });
+
+  it("init wallet", async () => {
     const { transaction, walletGuardianAddress } =
       await CompressedAaPocProgram.initWalletTx(rpc, wallet.publicKey);
 
@@ -73,19 +82,11 @@ describe("token-escrow", () => {
   });
 
   it("register keypair", async () => {
-    const assignGuardian = new Keypair().publicKey;
-
-    await airdropSol({
-      connection: rpc,
-      lamports: 100 * LAMPORTS_PER_SOL,
-      recipientPublicKey: assignGuardian,
-    });
-
     const { transaction, walletGuardianAddress } =
       await CompressedAaPocProgram.registerKeypairTx(
         rpc,
         wallet.publicKey,
-        assignGuardian
+        assignGuardian.publicKey
       );
 
     transaction.sign([wallet.payer]);
@@ -116,7 +117,7 @@ describe("token-escrow", () => {
       wallet.publicKey
     );
 
-    expect(walletGuardianData.guardian).to.deep.eq(assignGuardian);
+    expect(walletGuardianData.guardian).to.deep.eq(assignGuardian.publicKey);
     expect(walletGuardianData.wallet).to.deep.eq(walletPdaPubkey);
     expect(derrivedWallet).to.deep.eq(walletPdaPubkey);
   });
