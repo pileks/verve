@@ -106,6 +106,10 @@ pub mod compressed_aa_poc {
 
         Ok(())
     }
+
+    pub fn generate_idls_noop(_ctx: Context<GenerateIdls>, _types: Types) -> Result<()> {
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -215,6 +219,14 @@ pub struct ExecInstruction<'info> {
     /// CHECK: Checked in light-system-program.
     #[authority]
     pub cpi_signer: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct GenerateIdls {}
+
+#[derive(AnchorSerialize, AnchorDeserialize)]
+pub struct Types {
+    wallet_guardian: WalletGuardian,
 }
 
 #[error_code]
