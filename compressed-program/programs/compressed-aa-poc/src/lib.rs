@@ -64,6 +64,9 @@ pub mod compressed_aa_poc {
     pub fn exec_instruction<'info>(
         ctx: LightContext<'_, '_, '_, 'info, ExecInstruction<'info>>,
         instruction_data: Vec<u8>,
+        account_keys: Vec<Pubkey>,
+        is_writable_flags: Vec<bool>,
+        is_signer_flags: Vec<bool>,
     ) -> Result<()> {
         require!(
             ctx.accounts
@@ -78,36 +81,58 @@ pub mod compressed_aa_poc {
                 .wallet
                 .key()
                 .eq(&ctx.light_accounts.wallet_guardian.wallet.key()),
-            AaError::GuardianMismatch
+            AaError::WalletMismatch
         );
 
-        msg!("Executing tx for AA wallet: {}", ctx.accounts.wallet.key());
-        msg!("Tx approved by: {}", ctx.accounts.guardian.key());
+        msg!(
+            "Executing tx for AA wallet {}, approved by: {}",
+            ctx.accounts.wallet.key(),
+            ctx.accounts.guardian.key()
+        );
+
+        let mut account_metas: Vec<AccountMeta> = vec![];
+
+        for (i, account_key) in account_keys.iter().enumerate() {
+            let is_writable = is_writable_flags.get(i).cloned().unwrap_or(false);
+            let is_signer = is_signer_flags.get(i).cloned().unwrap_or(false);
+
+            let account_meta = if is_writable {
+                AccountMeta::new(*account_key, is_signer)
+            } else {
+                AccountMeta::new_readonly(*account_key, is_signer)
+            };
+
+            account_metas.push(account_meta);
+        }
 
         let instruction = Instruction {
-            accounts: ctx.accounts.wallet.to_account_metas(Some(true)).to_vec(),
+            accounts: account_metas,
             data: instruction_data,
             program_id: ctx.remaining_accounts[0].key(),
         };
 
         let seed_guardian_key = ctx.accounts.seed_guardian.key();
+
         let seeds = [
             &PDA_WALLET_SEED[..],
             seed_guardian_key.as_ref(),
             &[ctx.bumps.wallet][..],
         ];
+
         let signer_seeds = &[&seeds[..]];
+
+        let cpi_accounts: Vec<AccountInfo<'info>> = ctx.remaining_accounts[1..].to_vec();
 
         anchor_lang::solana_program::program::invoke_signed(
             &instruction,
-            &[ctx.accounts.wallet.to_account_info()],
+            &cpi_accounts,
             signer_seeds,
         )?;
 
         Ok(())
     }
 
-    pub fn generate_idls_noop(_ctx: Context<GenerateIdls>, _types: Types) -> Result<()> {
+    pub fn generate_idl_types_noop(_ctx: Context<GenerateIdls>, _types: Types) -> Result<()> {
         Ok(())
     }
 }
@@ -202,7 +227,7 @@ pub struct ExecInstruction<'info> {
     pub wallet: AccountInfo<'info>,
 
     #[light_account(
-        init,
+        mut,
         seeds=[PDA_WALLET_GUARDIAN_SEED, wallet.key().as_ref(), guardian.key().as_ref()],
     )]
     pub wallet_guardian: LightAccount<WalletGuardian>,
@@ -239,12 +264,16 @@ pub struct Types {
 pub enum AaError {
     #[msg("Guardian mismatch")]
     GuardianMismatch,
+
     #[msg("Wallet mismatch")]
     WalletMismatch,
+
     #[msg("Invalid token")]
     InvalidToken,
+
     #[msg("Invalid algorithm")]
     InvalidAlgorithm,
+
     #[msg("Invalid signature")]
     InvalidSignature,
 }
