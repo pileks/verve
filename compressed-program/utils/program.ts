@@ -32,13 +32,7 @@ import {
 } from "@lightprotocol/stateless.js";
 import idl from "../target/idl/compressed_aa_poc.json";
 
-function getAbstractWalletAddressBumps(
-  seedGuardianPubkey: PublicKey
-): [PublicKey, number] {
-  const seeds = [PDA_WALLET_SEED, seedGuardianPubkey.toBuffer()];
 
-  return PublicKey.findProgramAddressSync(seeds, CompressedAaPocProgram.programId);
-}
 
 export class CompressedAaPocProgram extends AaPocConstants {
   private static instance: CompressedAaPocProgram;
@@ -124,7 +118,7 @@ export class CompressedAaPocProgram extends AaPocConstants {
       this.addressTree
     );
 
-    console.log("walletGuardianAddress: ", walletGuardianAddress);
+    console.log("walletGuardianAddress: ", walletGuardianAddress.toBase58());
 
     const newUniqueAddresses: PublicKey[] = [];
 
@@ -161,8 +155,6 @@ export class CompressedAaPocProgram extends AaPocConstants {
       remainingAccounts,
     } = this.packNew(outputCompressedAccounts, newAddressesParams, proof);
 
-    const [abstractWalletAddress, _bumps] = getAbstractWalletAddressBumps(assignGuardian);
-
     const ix = await CompressedAaPocProgram.getInstance()
       .program.methods.initWallet(
         [], // inputs
@@ -175,7 +167,7 @@ export class CompressedAaPocProgram extends AaPocConstants {
       .accounts({
         payer: assignGuardian,
         assignGuardian: assignGuardian,
-        wallet: abstractWalletAddress,
+        wallet: wallet,
         ...this.lightAccounts(),
       })
       .remainingAccounts(toAccountMetas(remainingAccounts))
