@@ -156,7 +156,7 @@ pub struct InitWallet<'info> {
 pub struct RegisterKeypair<'info> {
     /// CHECK: No need to have this account initialized lol
     #[account(
-        seeds=[PDA_WALLET_SEED, assign_guardian.key().as_ref()],
+        seeds=[PDA_WALLET_SEED, seed_guardian.key().as_ref()],
         bump
     )]
     pub wallet: AccountInfo<'info>,
