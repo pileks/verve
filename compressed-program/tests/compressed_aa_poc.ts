@@ -1,9 +1,4 @@
-import {
-  setProvider,
-  AnchorProvider,
-  getProvider,
-  Wallet,
-} from "@coral-xyz/anchor";
+import { setProvider, AnchorProvider, Wallet } from "@coral-xyz/anchor";
 import {
   airdropSol,
   createRpc,
@@ -12,9 +7,9 @@ import {
 } from "@lightprotocol/stateless.js";
 import { CompressedAaPocProgram } from "../utils/program";
 import { Keypair, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
-import { assert, expect } from "chai";
+import { expect } from "chai";
 
-describe("token-escrow", () => {
+describe("compressed aa poc", () => {
   // Configure the client to use the local cluster.
   const provider = AnchorProvider.env();
   const wallet = provider.wallet as Wallet;
@@ -43,7 +38,7 @@ describe("token-escrow", () => {
     });
   });
 
-  it("init wallet", async () => {
+  it("initWallet", async () => {
     const { transaction, walletGuardianAddress } =
       await CompressedAaPocProgram.initWalletTx(rpc, wallet.publicKey);
 
@@ -81,7 +76,7 @@ describe("token-escrow", () => {
     walletPdaPubkey = derrivedWallet;
   });
 
-  it("register keypair", async () => {
+  it("registerKeypair", async () => {
     const { transaction, walletGuardianAddress } =
       await CompressedAaPocProgram.registerKeypairTx(
         rpc,
@@ -122,5 +117,63 @@ describe("token-escrow", () => {
     expect(derrivedWallet).to.deep.eq(walletPdaPubkey);
   });
 
-  it("exec instruction", async () => {});
+  it("execInstruction seed guardian", async () => {
+    const testIx = await CompressedAaPocProgram.getInstance()
+      .program.methods.testTransaction()
+      .instruction();
+
+    const { transaction, walletGuardianAddress } =
+      await CompressedAaPocProgram.execInstructionTx(
+        rpc,
+        wallet.publicKey,
+        wallet.publicKey,
+        testIx
+      );
+
+    transaction.sign([wallet.payer]);
+
+    const signature = await sendAndConfirmTx(rpc, transaction, {
+      skipPreflight: true,
+      commitment: "confirmed",
+    });
+
+    const log = await rpc.getTransaction(signature, {
+      commitment: "confirmed",
+      maxSupportedTransactionVersion: 0,
+    });
+
+    console.log("signature: ", signature);
+
+    console.log("messages: ", log.meta.logMessages);
+  });
+
+  it("execInstruction assigned guardian", async () => {
+    const testIx = await CompressedAaPocProgram.getInstance()
+      .program.methods.testTransaction()
+      .instruction();
+
+    const { transaction, walletGuardianAddress } =
+      await CompressedAaPocProgram.execInstructionTx(
+        rpc,
+        wallet.publicKey,
+        assignGuardian.publicKey,
+        testIx
+      );
+
+    transaction.sign([assignGuardian]);
+
+    const signature = await sendAndConfirmTx(rpc, transaction, {
+      skipPreflight: true,
+      commitment: "confirmed",
+    });
+
+    const log = await rpc.getTransaction(signature, {
+      commitment: "confirmed",
+      maxSupportedTransactionVersion: 0,
+    });
+
+    console.log("signature: ", signature);
+
+    console.log("messages: ", log.meta.logMessages);
+  });
 });

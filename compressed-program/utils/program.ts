@@ -124,6 +124,28 @@ export class CompressedAaPocProgram extends AaPocConstants {
     return { transaction: tx, walletGuardianAddress };
   }
 
+  static async execInstructionTx(
+    rpc: Rpc,
+    seedGuardian: PublicKey,
+    guardian: PublicKey,
+    testIx: TransactionInstruction
+  ) {
+    const { instruction, walletGuardianAddress } = await this.execInstructionIx(
+      rpc,
+      seedGuardian,
+      guardian,
+      testIx
+    );
+
+    const tx = await this.buildTxWithComputeBudget(
+      rpc,
+      [instruction],
+      guardian
+    );
+
+    return { transaction: tx, walletGuardianAddress };
+  }
+
   private static async initWalletIx(rpc: Rpc, assignGuardian: PublicKey) {
     const wallet = this.deriveWalletAddress(assignGuardian);
 
@@ -280,6 +302,69 @@ export class CompressedAaPocProgram extends AaPocConstants {
     };
   }
 
+  private static async execInstructionIx(
+    rpc: Rpc,
+    seedGuardian: PublicKey,
+    guardian: PublicKey,
+    testIx: TransactionInstruction
+  ) {
+    const wallet = this.deriveWalletAddress(seedGuardian);
+
+    const walletGuardianSeed = this.deriveWalletGuardianSeed(wallet, guardian);
+
+    const walletGuardianAddress: PublicKey = deriveAddress(
+      walletGuardianSeed,
+      this.addressTree
+    );
+
+    const walletGuardianAccount = await rpc.getCompressedAccount(
+      new BN(walletGuardianAddress.toBytes())
+    );
+
+    const inputleafhashes = [bn(walletGuardianAccount.hash)];
+
+    const proof = await this.getValidityProof(rpc, inputleafhashes, []);
+
+    const { accounts, writables, signers } =
+      this.getAccountsWritablesSignersForInstruction(testIx);
+
+    const {
+      addressMerkleContext,
+      addressMerkleTreeRootIndex,
+      merkleContext,
+      rootIndex,
+      remainingAccounts,
+    } = this.packWithInput([walletGuardianAccount], [], [], proof);
+
+    const ix = await CompressedAaPocProgram.getInstance()
+      .program.methods.execInstruction(
+        [walletGuardianAccount.data.data], // inputs
+        proof.compressedProof, // proof
+        merkleContext, // merkleContext
+        rootIndex, // merkleTreeRootIndex
+        addressMerkleContext, // addressMerkleContext
+        addressMerkleTreeRootIndex, // addressMerkleTreeRootIndex
+        testIx.data,
+        accounts,
+        writables,
+        signers
+      )
+      .accounts({
+        payer: guardian,
+        seedGuardian: seedGuardian,
+        guardian: guardian,
+        wallet: wallet,
+        ...this.lightAccounts(),
+      })
+      .remainingAccounts(toAccountMetas(remainingAccounts))
+      .instruction();
+
+    return {
+      instruction: ix,
+      walletGuardianAddress,
+    };
+  }
+
   private static packWithInput(
     inputCompressedAccounts: CompressedAccountWithMerkleContext[],
     outputCompressedAccounts: CompressedAccount[],
@@ -367,7 +452,7 @@ export class CompressedAaPocProgram extends AaPocConstants {
     rpc: Rpc,
     inputHashes?: BN[],
     newUniqueAddresses?: PublicKey[]
-  ) {
+  ): Promise<CompressedProofWithContext> {
     const outputHashes = newUniqueAddresses?.map((addr) => bn(addr.toBytes()));
 
     return await rpc.getValidityProof(inputHashes, outputHashes);
@@ -405,11 +490,27 @@ export class CompressedAaPocProgram extends AaPocConstants {
     ]);
   }
 
-  static decodeTypes<T>(typeName: string, data: Buffer) {
+  static decodeTypes<T>(typeName: string, data: Buffer): T {
     return CompressedAaPocProgram.getInstance().program.coder.types.decode<T>(
       typeName,
       data
     );
+  }
+
+  static getAccountsWritablesSignersForInstruction(
+    testIx: TransactionInstruction
+  ) {
+    const accounts: PublicKey[] = [];
+    const writables: boolean[] = [];
+    const signers: boolean[] = [];
+
+    for (let accountMeta of testIx.keys) {
+      accounts.push(accountMeta.pubkey);
+      writables.push(accountMeta.isWritable);
+      signers.push(accountMeta.isSigner);
+    }
+
+    return { accounts, writables, signers };
   }
 
   static async buildTxWithComputeBudget(
