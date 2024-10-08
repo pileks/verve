@@ -1,4 +1,4 @@
-import { AnchorProvider, BN, Program, setProvider } from "@coral-xyz/anchor";
+import { BN, getProvider, Program } from "@coral-xyz/anchor";
 import { CompressedAaPoc } from "../target/types/compressed_aa_poc";
 import { WalletGuardian } from "./types";
 import {
@@ -9,9 +9,8 @@ import {
 import {
   AccountMeta,
   ComputeBudgetProgram,
-  Connection,
-  Keypair,
   PublicKey,
+  Signer,
   TransactionInstruction,
   VersionedTransaction,
 } from "@solana/web3.js";
@@ -21,7 +20,6 @@ import {
   CompressedAccount,
   CompressedAccountWithMerkleContext,
   CompressedProofWithContext,
-  confirmConfig,
   deriveAddress,
   getIndexOrAdd,
   NewAddressParams,
@@ -30,7 +28,6 @@ import {
   packNewAddressParams,
   Rpc,
   toAccountMetas,
-  useWallet,
 } from "@lightprotocol/stateless.js";
 import idl from "../target/idl/compressed_aa_poc.json";
 
@@ -61,25 +58,12 @@ export class CompressedAaPocProgram extends AaPocConstants {
 
   private initializeProgram(): void {
     if (!this._program) {
-      const mockKeypair = Keypair.generate();
-
-      const mockConnection = new Connection(
-        "http://127.0.0.1:8899",
-        "confirmed"
-      );
-
-      const mockProvider = new AnchorProvider(
-        mockConnection,
-        useWallet(mockKeypair),
-        confirmConfig
-      );
-
-      setProvider(mockProvider);
+      const provider = getProvider();
 
       this._program = new Program(
         idl as CompressedAaPoc,
         CompressedAaPocProgram.programId,
-        mockProvider
+        provider
       );
     }
   }
@@ -129,19 +113,21 @@ export class CompressedAaPocProgram extends AaPocConstants {
     rpc: Rpc,
     seedGuardian: PublicKey,
     guardian: PublicKey,
-    testIx: TransactionInstruction
+    testIx: TransactionInstruction,
+    signers: Array<Signer>
   ) {
     const { instruction, walletGuardianAddress } = await this.execInstructionIx(
       rpc,
       seedGuardian,
       guardian,
-      testIx
+      testIx,
+      signers
     );
 
     const tx = await this.buildTxWithComputeBudget(
       rpc,
       [instruction],
-      guardian
+      seedGuardian
     );
 
     return { transaction: tx, walletGuardianAddress };
@@ -159,8 +145,6 @@ export class CompressedAaPocProgram extends AaPocConstants {
       walletGuardianSeed,
       this.addressTree
     );
-
-    console.log("walletGuardianAddress: ", walletGuardianAddress.toBase58());
 
     const newUniqueAddresses: PublicKey[] = [];
 
@@ -182,12 +166,6 @@ export class CompressedAaPocProgram extends AaPocConstants {
 
     outputCompressedAccounts.push(
       ...this.createNewAddressOutputState(walletGuardianAddress)
-    );
-
-    console.log(
-      `newUniqueAddresses length: ${newUniqueAddresses.length}`,
-      `outputCompressedAccounts length: ${outputCompressedAccounts.length}`,
-      `newAddressesParams length: ${newAddressesParams.length}`
     );
 
     const {
@@ -238,11 +216,6 @@ export class CompressedAaPocProgram extends AaPocConstants {
       this.addressTree
     );
 
-    console.log(
-      "new walletGuardianAddress: ",
-      walletGuardianAddress.toBase58()
-    );
-
     const newUniqueAddresses: PublicKey[] = [];
 
     newUniqueAddresses.push(walletGuardianAddress);
@@ -263,12 +236,6 @@ export class CompressedAaPocProgram extends AaPocConstants {
 
     outputCompressedAccounts.push(
       ...this.createNewAddressOutputState(walletGuardianAddress)
-    );
-
-    console.log(
-      `newUniqueAddresses length: ${newUniqueAddresses.length}`,
-      `outputCompressedAccounts length: ${outputCompressedAccounts.length}`,
-      `newAddressesParams length: ${newAddressesParams.length}`
     );
 
     const {
@@ -307,7 +274,8 @@ export class CompressedAaPocProgram extends AaPocConstants {
     rpc: Rpc,
     seedGuardian: PublicKey,
     guardian: PublicKey,
-    testIx: TransactionInstruction
+    testIx: TransactionInstruction,
+    ixSigners: Array<Signer>
   ) {
     const wallet = this.deriveWalletAddress(seedGuardian);
 
@@ -324,7 +292,7 @@ export class CompressedAaPocProgram extends AaPocConstants {
 
     const inputleafhashes = [bn(walletGuardianAccount.hash)];
 
-    const proof = await this.getValidityProof(rpc, inputleafhashes, []);
+    const proof = await this.getValidityProof(rpc, inputleafhashes, undefined);
 
     const outputCompressedAccounts: CompressedAccount[] = [];
 
@@ -353,16 +321,11 @@ export class CompressedAaPocProgram extends AaPocConstants {
       proof
     );
 
-    console.log(
-      "remainingAccounts: ",
-      remainingAccounts.map((x) => x.toBase58()).join(", ")
-    );
-
     const testIxRemainingAccounts = [
       {
         isSigner: false,
         isWritable: false,
-        pubkey: this.programId,
+        pubkey: testIx.programId,
       } as AccountMeta,
       ...testIx.keys.map(
         (x) =>
@@ -382,10 +345,10 @@ export class CompressedAaPocProgram extends AaPocConstants {
         rootIndex, // merkleTreeRootIndex
         addressMerkleContext, // addressMerkleContext
         addressMerkleTreeRootIndex, // addressMerkleTreeRootIndex
-        testIx.data,
-        accounts,
-        writables,
-        signers
+        testIx.data, // instructionData
+        accounts, // accountKeys
+        writables, // isWritableFlags
+        signers // isSignerFlags
       )
       .accounts({
         payer: guardian,
@@ -398,6 +361,7 @@ export class CompressedAaPocProgram extends AaPocConstants {
         ...toAccountMetas(remainingAccounts),
         ...testIxRemainingAccounts,
       ])
+      .signers(ixSigners)
       .instruction();
 
     return {
@@ -513,9 +477,9 @@ export class CompressedAaPocProgram extends AaPocConstants {
     );
   }
 
-  static deriveWalletAddress(assignGuardian: PublicKey): PublicKey {
+  static deriveWalletAddress(seedGuardian: PublicKey): PublicKey {
     return PublicKey.findProgramAddressSync(
-      [PDA_WALLET_SEED, assignGuardian.toBytes()],
+      [PDA_WALLET_SEED, seedGuardian.toBytes()],
       this.programId
     )[0];
   }

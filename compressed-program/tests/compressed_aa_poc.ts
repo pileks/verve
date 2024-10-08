@@ -127,7 +127,8 @@ describe("compressed aa poc", () => {
         rpc,
         wallet.publicKey,
         wallet.publicKey,
-        testIx
+        testIx,
+        [wallet.payer]
       );
 
     transaction.sign([wallet.payer]);
@@ -157,10 +158,11 @@ describe("compressed aa poc", () => {
         rpc,
         wallet.publicKey,
         assignGuardian.publicKey,
-        testIx
+        testIx,
+        [wallet.payer, assignGuardian]
       );
 
-    transaction.sign([assignGuardian]);
+    transaction.sign([wallet.payer, assignGuardian]);
 
     const signature = await sendAndConfirmTx(rpc, transaction, {
       skipPreflight: true,
