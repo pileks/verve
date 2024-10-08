@@ -7,6 +7,7 @@ import {
   PDA_WALLET_SEED,
 } from "./constants";
 import {
+  AccountMeta,
   ComputeBudgetProgram,
   Connection,
   Keypair,
@@ -352,6 +353,27 @@ export class CompressedAaPocProgram extends AaPocConstants {
       proof
     );
 
+    console.log(
+      "remainingAccounts: ",
+      remainingAccounts.map((x) => x.toBase58()).join(", ")
+    );
+
+    const testIxRemainingAccounts = [
+      {
+        isSigner: false,
+        isWritable: false,
+        pubkey: this.programId,
+      } as AccountMeta,
+      ...testIx.keys.map(
+        (x) =>
+          <AccountMeta>{
+            isSigner: false,
+            isWritable: x.isWritable,
+            pubkey: x.pubkey,
+          }
+      ),
+    ];
+
     const ix = await CompressedAaPocProgram.getInstance()
       .program.methods.execInstruction(
         [walletGuardianAccount.data.data], // inputs
@@ -372,7 +394,10 @@ export class CompressedAaPocProgram extends AaPocConstants {
         wallet: wallet,
         ...this.lightAccounts(),
       })
-      .remainingAccounts(toAccountMetas(remainingAccounts))
+      .remainingAccounts([
+        ...toAccountMetas(remainingAccounts),
+        ...testIxRemainingAccounts,
+      ])
       .instruction();
 
     return {

@@ -102,13 +102,15 @@ pub mod compressed_aa_poc {
                 AccountMeta::new_readonly(*account_key, is_signer)
             };
 
+            msg!("Account meta {}: {:?}", &i, &account_meta);
+
             account_metas.push(account_meta);
         }
 
         let instruction = Instruction {
             accounts: account_metas,
             data: instruction_data,
-            program_id: ctx.remaining_accounts[0].key(),
+            program_id: ctx.remaining_accounts[2].key(),
         };
 
         let seed_guardian_key = ctx.accounts.seed_guardian.key();
@@ -121,7 +123,7 @@ pub mod compressed_aa_poc {
 
         let signer_seeds = &[&seeds[..]];
 
-        let cpi_accounts: Vec<AccountInfo<'info>> = ctx.remaining_accounts[1..].to_vec();
+        let cpi_accounts: Vec<AccountInfo<'info>> = ctx.remaining_accounts[3..].to_vec();
 
         anchor_lang::solana_program::program::invoke_signed(
             &instruction,
