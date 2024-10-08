@@ -325,6 +325,17 @@ export class CompressedAaPocProgram extends AaPocConstants {
 
     const proof = await this.getValidityProof(rpc, inputleafhashes, []);
 
+    const outputCompressedAccounts: CompressedAccount[] = [];
+
+    outputCompressedAccounts.push(
+      ...this.createNewAddressOutputState(walletGuardianAddress)
+    );
+
+    const newAddressesParams = [];
+    newAddressesParams.push(
+      this.getNewAddressParams(walletGuardianSeed, proof)
+    );
+
     const { accounts, writables, signers } =
       this.getAccountsWritablesSignersForInstruction(testIx);
 
@@ -334,7 +345,12 @@ export class CompressedAaPocProgram extends AaPocConstants {
       merkleContext,
       rootIndex,
       remainingAccounts,
-    } = this.packWithInput([walletGuardianAccount], [], [], proof);
+    } = this.packWithInput(
+      [walletGuardianAccount],
+      outputCompressedAccounts,
+      newAddressesParams,
+      proof
+    );
 
     const ix = await CompressedAaPocProgram.getInstance()
       .program.methods.execInstruction(
