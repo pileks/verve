@@ -35,9 +35,7 @@ You need to have `@lightprotocol/zk-compression-cli`, version `0.19.0` installed
 ```
 cd compressed-program
 yarn
-yarn light-start
 yarn test
-yarn light-kill
 ```
 
 ## Web projects

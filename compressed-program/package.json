@@ -2,7 +2,7 @@
   "license": "ISC",
   "scripts": {
     "build": "yarn copy-keypairs && anchor build",
-    "test": "yarn copy-keypairs && anchor test --skip-local-validator",
+    "test": "yarn light-start && yarn copy-keypairs && anchor test --skip-local-validator && yarn light-kill",
     "light-start": "light test-validator",
     "light-kill": "light test-validator --stop",
     "copy-keypairs": "mkdir -p target/deploy && cp test-keys/compressed_aa_poc-keypair.json target/deploy/compressed_aa_poc-keypair.json",

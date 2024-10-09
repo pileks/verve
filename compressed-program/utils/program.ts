@@ -279,7 +279,7 @@ export class CompressedAaPocProgram extends AaPocConstants {
   ) {
     const wallet = this.deriveWalletAddress(seedGuardian);
 
-    const walletGuardianSeed = this.deriveWalletGuardianSeed(wallet, guardian);
+    const walletGuardianSeed = this.deriveWalletGuardianSeed(wallet, guardian); // address_seed
 
     const walletGuardianAddress: PublicKey = deriveAddress(
       walletGuardianSeed,
@@ -290,9 +290,14 @@ export class CompressedAaPocProgram extends AaPocConstants {
       new BN(walletGuardianAddress.toBytes())
     );
 
+    const walletGuardianAccountProof = await rpc.getCompressedAccountProof(
+      new BN(walletGuardianAccount.hash)
+    );
     const inputleafhashes = [bn(walletGuardianAccount.hash)];
 
     const proof = await this.getValidityProof(rpc, inputleafhashes, undefined);
+    
+    const myProof = await rpc.getValidityProof(inputleafhashes, undefined);
 
     const outputCompressedAccounts: CompressedAccount[] = [];
 
@@ -300,26 +305,60 @@ export class CompressedAaPocProgram extends AaPocConstants {
       ...this.createNewAddressOutputState(walletGuardianAddress)
     );
 
-    const newAddressesParams = [];
-    newAddressesParams.push(
-      this.getNewAddressParams(walletGuardianSeed, proof)
+    const address_merkle_context = {
+      address_merkle_tree_pubkey: this.addressTree,
+      address_queue_pubkey: this.addressQueue,
+    };
+    
+    const remaining_accounts: PublicKey[] = [];
+
+    remaining_accounts.push(
+      address_merkle_context.address_merkle_tree_pubkey,
+      address_merkle_context.address_queue_pubkey
     );
+
+    const address_merkle_context_indexes = {
+      addressMerkleTreePubkeyIndex: 0,
+      addressQueuePubkeyIndex: 1,
+    };
+
+    const {
+      packedInputCompressedAccounts,
+      packedOutputCompressedAccounts,
+      remainingAccounts: remaining_accounts_1,
+    } = packCompressedAccounts(
+      [walletGuardianAccount],
+      [walletGuardianAccountProof.rootIndex],
+      [],
+      this.merkleTree,
+      remaining_accounts
+    );
+
+    let { rootIndex: root_index, merkleContext: merkle_context } = packedInputCompressedAccounts[0];
+
+    console.log("ROOT INDEX", root_index);
+    console.log("MC", merkle_context);
+
+    // const newAddressesParams = [];
+    // newAddressesParams.push(
+    //   this.getNewAddressParams(walletGuardianSeed, proof)
+    // );
 
     const { accounts, writables, signers } =
       this.getAccountsWritablesSignersForInstruction(testIx);
 
-    const {
-      addressMerkleContext,
-      addressMerkleTreeRootIndex,
-      merkleContext,
-      rootIndex,
-      remainingAccounts,
-    } = this.packWithInput(
-      [walletGuardianAccount],
-      outputCompressedAccounts,
-      newAddressesParams,
-      proof
-    );
+    // const {
+    //   addressMerkleContext,
+    //   addressMerkleTreeRootIndex,
+    //   merkleContext,
+    //   rootIndex,
+    //   remainingAccounts,
+    // } = this.packWithInput(
+    //   [walletGuardianAccount],
+    //   outputCompressedAccounts,
+    //   newAddressesParams,
+    //   proof
+    // );
 
     const testIxRemainingAccounts = [
       {
@@ -337,14 +376,24 @@ export class CompressedAaPocProgram extends AaPocConstants {
       ),
     ];
 
+    const accts = [this.merkleTree, this.nullifierQueue, this.addressTree, this.addressQueue];
+
     const ix = await CompressedAaPocProgram.getInstance()
       .program.methods.execInstruction(
         [walletGuardianAccount.data.data], // inputs
-        proof.compressedProof, // proof
-        merkleContext, // merkleContext
-        rootIndex, // merkleTreeRootIndex
-        addressMerkleContext, // addressMerkleContext
-        addressMerkleTreeRootIndex, // addressMerkleTreeRootIndex
+        myProof.compressedProof, // proof
+        {
+          merkleTreePubkeyIndex: 0,
+          nullifierQueuePubkeyIndex: 1,
+          leafIndex: 0,
+          queueIndex: null
+        }, // merkleContext
+        walletGuardianAccountProof.rootIndex, // merkleTreeRootIndex
+        {
+          addressMerkleTreePubkeyIndex: 2,
+          addressQueuePubkeyIndex: 3
+        }, // addressMerkleContext
+        0, // addressMerkleTreeRootIndex
         testIx.data, // instructionData
         accounts, // accountKeys
         writables, // isWritableFlags
@@ -358,7 +407,7 @@ export class CompressedAaPocProgram extends AaPocConstants {
         ...this.lightAccounts(),
       })
       .remainingAccounts([
-        ...toAccountMetas(remainingAccounts),
+        ...toAccountMetas(accts),
         ...testIxRemainingAccounts,
       ])
       .signers(ixSigners)

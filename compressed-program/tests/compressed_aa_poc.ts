@@ -117,7 +117,7 @@ describe("compressed aa poc", () => {
     expect(derrivedWallet).to.deep.eq(walletPdaPubkey);
   });
 
-  it.skip("execInstruction seed guardian", async () => {
+  it("execInstruction seed guardian", async () => {
     const testIx = await CompressedAaPocProgram.getInstance()
       .program.methods.testTransaction()
       .instruction();
