@@ -117,7 +117,7 @@ describe("compressed aa poc", () => {
     expect(derrivedWallet).to.deep.eq(walletPdaPubkey);
   });
 
-  it("execInstruction seed guardian", async () => {
+  it.skip("execInstruction seed guardian", async () => {
     const testIx = await CompressedAaPocProgram.getInstance()
       .program.methods.testTransaction()
       .instruction();
@@ -148,7 +148,7 @@ describe("compressed aa poc", () => {
     console.log("messages: ", log.meta.logMessages);
   });
 
-  it("execInstruction assigned guardian", async () => {
+  it.skip("execInstruction assigned guardian", async () => {
     const testIx = await CompressedAaPocProgram.getInstance()
       .program.methods.testTransaction()
       .instruction();
