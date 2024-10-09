@@ -1,20 +1,32 @@
 # Verve
 
+Embedded smart wallets using AA + ZK Compression
+
+[X/Twitter](https://x.com/verve_wallet)
+
 ## Program
 
 The base program logic is implemented inside the `program` directory.
+
+We have a proof-of-concept that shows smart account creation and token transfer between two smart accounts.
+
+### Run Program examples
+
+```
+cd program
+yarn
+yarn test
+```
 
 ## ZK Compression
 
 The ZK compressed program lies within the `compressed-program` directory.
 
-Thanks to ZK compression, we can reduce costs of creating accounts and assigning new guardians down to 0.01 cents (0.0001 USD).
+Thanks to ZK compression, we can reduce costs of creating accounts and assigning new guardians down to the cost of transaction fees.
 
 The ZK compressed program will be used as the main implementation in Verve wallet.
 
-The base program exists merely as a simpler way to test new features, before merging them into the ZK program.
-
-Swen, give us a `#[light_instruction]` macro pls bro.
+The base program exists merely as a way to test new features, before moving them into the ZK program.
 
 ### Run ZK Compression examples
 
@@ -28,7 +40,13 @@ yarn test
 yarn light-kill
 ```
 
-## How to run this
+## Web projects
+
+The `frontend`, `app-one`, and `backend` projects show a simplified example of how Verve can work using cross-origin iframes and the postMessage API.
+
+All parts are in active development, and may not always work until we merge in changes from our core programs.
+
+### Running these
 
 1. In one terminal, start a **fresh** local Solana validator:
    ```sh
