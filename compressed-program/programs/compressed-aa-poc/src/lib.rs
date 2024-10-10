@@ -129,10 +129,6 @@ pub mod compressed_aa_poc {
             signer_seeds,
         )?;
 
-        // strips instruction remaining accounts and leaves only remaining accounts for proof verification
-        // y tho
-        // ctx.remaining_accounts = &ctx.remaining_accounts[0..4];
-
         Ok(())
     }
 
