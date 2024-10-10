@@ -148,7 +148,7 @@ describe("compressed aa poc", () => {
     console.log("messages: ", log.meta.logMessages);
   });
 
-  it.skip("execInstruction assigned guardian", async () => {
+  it("execInstruction assigned guardian", async () => {
     const testIx = await CompressedAaPocProgram.getInstance()
       .program.methods.testTransaction()
       .instruction();
