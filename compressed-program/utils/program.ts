@@ -290,74 +290,20 @@ export class CompressedAaPocProgram extends AaPocConstants {
       new BN(walletGuardianAddress.toBytes())
     );
 
-    const walletGuardianAccountProof = await rpc.getCompressedAccountProof(
-      new BN(walletGuardianAccount.hash)
-    );
     const inputleafhashes = [bn(walletGuardianAccount.hash)];
 
     const proof = await this.getValidityProof(rpc, inputleafhashes, undefined);
 
-    const outputCompressedAccounts: CompressedAccount[] = [];
-
-    outputCompressedAccounts.push(
-      ...this.createNewAddressOutputState(walletGuardianAddress)
-    );
-
-    const address_merkle_context = {
-      address_merkle_tree_pubkey: this.addressTree,
-      address_queue_pubkey: this.addressQueue,
-    };
-
-    const remaining_accounts: PublicKey[] = [];
-
-    remaining_accounts.push(
-      address_merkle_context.address_merkle_tree_pubkey,
-      address_merkle_context.address_queue_pubkey
-    );
-
-    const address_merkle_context_indexes = {
-      addressMerkleTreePubkeyIndex: 0,
-      addressQueuePubkeyIndex: 1,
-    };
-
     const {
-      packedInputCompressedAccounts,
-      packedOutputCompressedAccounts,
-      remainingAccounts: remaining_accounts_1,
-    } = packCompressedAccounts(
-      [walletGuardianAccount],
-      [walletGuardianAccountProof.rootIndex],
-      [],
-      this.merkleTree,
-      remaining_accounts
-    );
-
-    let { rootIndex: root_index, merkleContext: merkle_context } =
-      packedInputCompressedAccounts[0];
-
-    console.log("ROOT INDEX", root_index);
-    console.log("MC", merkle_context);
-
-    // const newAddressesParams = [];
-    // newAddressesParams.push(
-    //   this.getNewAddressParams(walletGuardianSeed, proof)
-    // );
+      addressMerkleContext,
+      addressMerkleTreeRootIndex,
+      merkleContext,
+      remainingAccounts,
+      rootIndex,
+    } = this.packWithInput([walletGuardianAccount], [], [], proof);
 
     const { accounts, writables, signers } =
       this.getAccountsWritablesSignersForInstruction(testIx);
-
-    // const {
-    //   addressMerkleContext,
-    //   addressMerkleTreeRootIndex,
-    //   merkleContext,
-    //   rootIndex,
-    //   remainingAccounts,
-    // } = this.packWithInput(
-    //   [walletGuardianAccount],
-    //   outputCompressedAccounts,
-    //   newAddressesParams,
-    //   proof
-    // );
 
     const testIxRemainingAccounts = [
       {
@@ -375,29 +321,14 @@ export class CompressedAaPocProgram extends AaPocConstants {
       ),
     ];
 
-    const accts = [
-      this.merkleTree,
-      this.nullifierQueue,
-      this.addressTree,
-      this.addressQueue,
-    ];
-
     const ix = await CompressedAaPocProgram.getInstance()
       .program.methods.execInstruction(
         [walletGuardianAccount.data.data], // inputs
         proof.compressedProof, // proof
-        {
-          merkleTreePubkeyIndex: 0,
-          nullifierQueuePubkeyIndex: 1,
-          leafIndex: walletGuardianAccount.leafIndex,
-          queueIndex: null,
-        }, // merkleContext
-        walletGuardianAccountProof.rootIndex, // merkleTreeRootIndex
-        {
-          addressMerkleTreePubkeyIndex: 2,
-          addressQueuePubkeyIndex: 3,
-        }, // addressMerkleContext
-        0, // addressMerkleTreeRootIndex
+        merkleContext, // merkleContext
+        rootIndex, // merkleTreeRootIndex
+        addressMerkleContext, // addressMerkleContext
+        addressMerkleTreeRootIndex, // addressMerkleTreeRootIndex
         testIx.data, // instructionData
         accounts, // accountKeys
         writables, // isWritableFlags
@@ -410,7 +341,10 @@ export class CompressedAaPocProgram extends AaPocConstants {
         wallet: wallet,
         ...this.lightAccounts(),
       })
-      .remainingAccounts([...toAccountMetas(accts), ...testIxRemainingAccounts])
+      .remainingAccounts([
+        ...toAccountMetas(remainingAccounts),
+        ...testIxRemainingAccounts,
+      ])
       .signers(ixSigners)
       .instruction();
 
@@ -428,23 +362,39 @@ export class CompressedAaPocProgram extends AaPocConstants {
   ) {
     const {
       packedInputCompressedAccounts,
-      remainingAccounts: _remainingAccounts,
+      remainingAccounts: remainingAccounts1,
     } = packCompressedAccounts(
       inputCompressedAccounts,
       proof.rootIndices,
       outputCompressedAccounts
     );
 
-    const { newAddressParamsPacked, remainingAccounts } = packNewAddressParams(
-      newAddressesParams,
-      _remainingAccounts
-    );
+    let addressMerkleTreeAccountIndex: number,
+      addressMerkleTreeRootIndex: number,
+      addressQueueAccountIndex: number;
 
-    let {
-      addressMerkleTreeAccountIndex,
-      addressMerkleTreeRootIndex,
-      addressQueueAccountIndex,
-    } = newAddressParamsPacked[0];
+    let remainingAccounts: PublicKey[] = remainingAccounts1;
+
+    if (newAddressesParams.length) {
+      const { newAddressParamsPacked, remainingAccounts: remainingAccounts2 } =
+        packNewAddressParams(newAddressesParams, remainingAccounts1);
+
+      const params = newAddressParamsPacked[0];
+
+      addressMerkleTreeAccountIndex = params.addressMerkleTreeAccountIndex;
+      addressMerkleTreeRootIndex = params.addressMerkleTreeRootIndex;
+      addressQueueAccountIndex = params.addressQueueAccountIndex;
+
+      remainingAccounts = remainingAccounts2;
+    } else {
+      addressMerkleTreeRootIndex = 0;
+
+      remainingAccounts.push(this.addressTree);
+      addressMerkleTreeAccountIndex = remainingAccounts.length - 1;
+
+      remainingAccounts.push(this.addressQueue);
+      addressQueueAccountIndex = remainingAccounts.length - 1;
+    }
 
     let { rootIndex, merkleContext } = packedInputCompressedAccounts[0];
 
@@ -453,7 +403,7 @@ export class CompressedAaPocProgram extends AaPocConstants {
         addressMerkleTreePubkeyIndex: addressMerkleTreeAccountIndex,
         addressQueuePubkeyIndex: addressQueueAccountIndex,
       },
-      addressMerkleTreeRootIndex,
+      addressMerkleTreeRootIndex: addressMerkleTreeRootIndex,
       merkleContext,
       rootIndex,
       remainingAccounts,
@@ -465,7 +415,7 @@ export class CompressedAaPocProgram extends AaPocConstants {
     newAddressesParams: NewAddressParams[],
     proof: CompressedProofWithContext
   ) {
-    const { remainingAccounts: _remainingAccounts } = packCompressedAccounts(
+    const { remainingAccounts: remainingAccounts1 } = packCompressedAccounts(
       [],
       proof.rootIndices,
       outputCompressedAccounts
@@ -473,7 +423,7 @@ export class CompressedAaPocProgram extends AaPocConstants {
 
     const { newAddressParamsPacked, remainingAccounts } = packNewAddressParams(
       newAddressesParams,
-      _remainingAccounts
+      remainingAccounts1
     );
 
     let {
