@@ -33,13 +33,11 @@ const rpc: Rpc = createRpc(undefined, undefined, undefined, {
 });
 
 // wallet 1
-let seedGuardianAddress1: PublicKey;
 let walletPda1: PublicKey;
 const assignGuardian1 = new Keypair();
 
 // wallet 2
 const seedGuardian2 = new Keypair();
-let seedGuardianAddress2: PublicKey;
 let walletPda2: PublicKey;
 const assignGuardian2 = new Keypair();
 
@@ -102,8 +100,6 @@ describe("initialize wallets and wallet guardians", () => {
 
     console.log("messages: ", log.meta.logMessages);
 
-    seedGuardianAddress1 = walletGuardianAddress;
-
     const walletGuardianData =
       await CompressedAaPocProgram.getWalletGuardianAccountData(
         rpc,
@@ -139,8 +135,6 @@ describe("initialize wallets and wallet guardians", () => {
     console.log("signature: ", signature);
 
     console.log("messages: ", log.meta.logMessages);
-
-    seedGuardianAddress2 = walletGuardianAddress;
 
     const walletGuardianData =
       await CompressedAaPocProgram.getWalletGuardianAccountData(
@@ -182,8 +176,6 @@ describe("initialize wallets and wallet guardians", () => {
 
     console.log("messages: ", log.meta.logMessages);
 
-    seedGuardianAddress1 = walletGuardianAddress;
-
     const walletGuardianData =
       await CompressedAaPocProgram.getWalletGuardianAccountData(
         rpc,
@@ -222,8 +214,6 @@ describe("initialize wallets and wallet guardians", () => {
     console.log("signature: ", signature);
 
     console.log("messages: ", log.meta.logMessages);
-
-    seedGuardianAddress1 = walletGuardianAddress;
 
     const walletGuardianData =
       await CompressedAaPocProgram.getWalletGuardianAccountData(
