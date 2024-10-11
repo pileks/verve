@@ -458,8 +458,8 @@ describe("spl token transfer tests", () => {
     );
   });
 
-  it("wallet 1 seed guardian transfer 10_000_000 tokens from wallet 1 ata to wallet 2 ata", async () => {
-    const transferAmount = 30_000_000;
+  it("wallet 1 seed guardian transfer 20_000_000 tokens from wallet 1 ata to wallet 2 ata", async () => {
+    const transferAmount = 20_000_000;
 
     const wallet1AtaBefore = await getAccount(
       provider.connection,
