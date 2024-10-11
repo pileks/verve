@@ -13,6 +13,14 @@ import {
   SystemProgram,
 } from "@solana/web3.js";
 import { expect } from "chai";
+import {
+  Account,
+  createMint,
+  createTransferInstruction,
+  getAccount,
+  getOrCreateAssociatedTokenAccount,
+  mintTo,
+} from "@solana/spl-token";
 
 // Configure the client to use the local cluster.
 const provider = AnchorProvider.env();
@@ -355,7 +363,7 @@ describe("wallet sol transfer tests", () => {
     );
   });
 
-  it("assigned guardian transfer 2 sol from wallet 1 to wallet 2", async () => {
+  it("wallet 1 assigned guardian transfer 2 sol from wallet 1 to wallet 2", async () => {
     const transferAmount = 2;
 
     const balanceBefore = await provider.connection.getBalance(walletPda1);
@@ -395,6 +403,158 @@ describe("wallet sol transfer tests", () => {
 
     expect(balanceBefore - balanceAfter).to.eq(
       transferAmount * LAMPORTS_PER_SOL
+    );
+  });
+});
+
+describe("spl token transfer tests", () => {
+  let wallet1Ata: Account, wallet2Ata: Account;
+
+  before("setup spl tokens", async () => {
+    // init mint
+    const mintKeypair = new Keypair();
+    const mintCreator = new Keypair();
+
+    await airdropSol({
+      connection: rpc,
+      lamports: 100 * LAMPORTS_PER_SOL,
+      recipientPublicKey: mintCreator.publicKey,
+    });
+
+    const mint = await createMint(
+      provider.connection,
+      mintCreator,
+      mintCreator.publicKey,
+      mintCreator.publicKey,
+      0,
+      mintKeypair
+    );
+
+    // init wallet atas
+    wallet1Ata = await getOrCreateAssociatedTokenAccount(
+      provider.connection,
+      mintCreator,
+      mint,
+      walletPda1,
+      true
+    );
+
+    wallet2Ata = await getOrCreateAssociatedTokenAccount(
+      provider.connection,
+      mintCreator,
+      mint,
+      walletPda2,
+      true
+    );
+
+    // mint tokens to wallet 1 ata
+    await mintTo(
+      provider.connection,
+      mintCreator,
+      mint,
+      wallet1Ata.address,
+      mintCreator,
+      100_000_000
+    );
+  });
+
+  it("wallet 1 seed guardian transfer 10_000_000 tokens from wallet 1 ata to wallet 2 ata", async () => {
+    const transferAmount = 30_000_000;
+
+    const wallet1AtaBefore = await getAccount(
+      provider.connection,
+      wallet1Ata.address
+    );
+
+    const transferSplIx = createTransferInstruction(
+      wallet1Ata.address,
+      wallet2Ata.address,
+      walletPda1,
+      transferAmount
+    );
+
+    const { transaction, walletGuardianAddress } =
+      await CompressedAaPocProgram.execInstructionTx(
+        rpc,
+        wallet.publicKey,
+        wallet.publicKey,
+        transferSplIx,
+        [wallet.payer]
+      );
+
+    transaction.sign([wallet.payer]);
+
+    const signature = await sendAndConfirmTx(rpc, transaction, {
+      skipPreflight: true,
+      commitment: "confirmed",
+    });
+
+    const log = await rpc.getTransaction(signature, {
+      commitment: "confirmed",
+      maxSupportedTransactionVersion: 0,
+    });
+
+    console.log("signature: ", signature);
+
+    console.log("messages: ", log.meta.logMessages);
+
+    const wallet1AtaAfter = await getAccount(
+      provider.connection,
+      wallet1Ata.address
+    );
+
+    expect(wallet1AtaBefore.amount - wallet1AtaAfter.amount).to.eq(
+      BigInt(transferAmount)
+    );
+  });
+
+  it("wallet 1 assigned guardian transfer 30_000_000 tokens from wallet 1 ata to wallet 2 ata", async () => {
+    const transferAmount = 30_000_000;
+
+    const wallet1AtaBefore = await getAccount(
+      provider.connection,
+      wallet1Ata.address
+    );
+
+    const transferSplIx = createTransferInstruction(
+      wallet1Ata.address,
+      wallet2Ata.address,
+      walletPda1,
+      transferAmount
+    );
+
+    const { transaction, walletGuardianAddress } =
+      await CompressedAaPocProgram.execInstructionTx(
+        rpc,
+        wallet.publicKey,
+        assignGuardian1.publicKey,
+        transferSplIx,
+        [wallet.payer]
+      );
+
+    transaction.sign([wallet.payer, assignGuardian1]);
+
+    const signature = await sendAndConfirmTx(rpc, transaction, {
+      skipPreflight: true,
+      commitment: "confirmed",
+    });
+
+    const log = await rpc.getTransaction(signature, {
+      commitment: "confirmed",
+      maxSupportedTransactionVersion: 0,
+    });
+
+    console.log("signature: ", signature);
+
+    console.log("messages: ", log.meta.logMessages);
+
+    const wallet1AtaAfter = await getAccount(
+      provider.connection,
+      wallet1Ata.address
+    );
+
+    expect(wallet1AtaBefore.amount - wallet1AtaAfter.amount).to.eq(
+      BigInt(transferAmount)
     );
   });
 });
