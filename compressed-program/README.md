@@ -1,27 +1,23 @@
-# Compressed Program Template
+# Compressed AA PoC
 
-This template initializes a counter program with instructions to create a compressed account, increment the accounts counter field and delete the account.
+This program contains functions to create an account abstracted wallet, assign a wallet guardian and execute instructions by the wallet.
 
-## Build
+## Instructions
 
-``
-$ anchor build
-``
+Install dependencies:
 
-## Test
+```
+yarn
+```
 
-Requirements:
-- light cli 
+Use specified anchor version:
 
-``
-$ cargo test-sbf
-``
+```
+avm use
+```
 
-The test spawns a prover server in the background.
-In case of a connection refused error on port 3001 try to kill the prover server with `lsof -i:3001` and `kill <pid>`.
+Run Typescript tests:
 
-
-## Disclaimer
-
-Programs are audited and deployed on Solana devnet and mainnet.
-The light rust macros are experimental and api will change.
+```
+yarn test
+```
