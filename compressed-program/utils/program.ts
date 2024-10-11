@@ -1,4 +1,5 @@
 import { BN, getProvider, Program } from "@coral-xyz/anchor";
+import idl from "../target/idl/compressed_aa_poc.json";
 import { CompressedAaPoc } from "../target/types/compressed_aa_poc";
 import { WalletGuardian } from "./types";
 import {
@@ -29,7 +30,6 @@ import {
   Rpc,
   toAccountMetas,
 } from "@lightprotocol/stateless.js";
-import idl from "../target/idl/compressed_aa_poc.json";
 
 export class CompressedAaPocProgram extends AaPocConstants {
   private static instance: CompressedAaPocProgram;
@@ -61,7 +61,7 @@ export class CompressedAaPocProgram extends AaPocConstants {
       const provider = getProvider();
 
       this._program = new Program(
-        idl as CompressedAaPoc,
+        idl as unknown as CompressedAaPoc,
         CompressedAaPocProgram.programId,
         provider
       );
