@@ -16,10 +16,10 @@
       "path": "./frontend"
     },
     {
-      "path": "./app-one"
+      "path": "./backend"
     },
     {
-      "path": "./backend"
+      "path": "./example"
     },
     {
       "name": "root",
