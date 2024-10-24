@@ -25,6 +25,9 @@
       "path": "./wallet-adapter",
     },
     {
+      "path": "./sdk",
+    },
+    {
       "name": "root",
       "path": "."
     }
