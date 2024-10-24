@@ -22,6 +22,9 @@
       "path": "./backend"
     },
     {
+      "path": "./wallet-adapter",
+    },
+    {
       "name": "root",
       "path": "."
     }

@@ -1,0 +1,36 @@
+{
+  "name": "@verve/wallet-adapter",
+  "version": "1.0.0",
+  "description": "Verve Wallet Adapter",
+  "author": "Verve",
+  "license": "Apache-2.0",
+  "main": "./lib/cjs/index.js",
+  "module": "./lib/esm/index.js",
+  "types": "./lib/types/index.d.ts",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "require": "./lib/cjs/index.js",
+    "import": "./lib/esm/index.js",
+    "types": "./lib/types/index.d.ts"
+  },
+  "dependencies": {
+    "@solana/wallet-adapter-base": "^0.9.23",
+    "@solana/web3.js": "^1.78.4"
+  },
+  "devDependencies": {
+    "@types/node": "^18.16.18",
+    "@typescript-eslint/eslint-plugin": "^8.11.0",
+    "@typescript-eslint/parser": "^8.11.0",
+    "tsup": "^8.3.0",
+    "typescript": "^5.6.3",
+    "shx": "^0.3.4",
+    "pnpm": "^9"
+  },
+  "scripts": {
+    "build": "pnpm run clean && tsc --build --verbose && pnpm run package",
+    "clean": "shx rm -rf lib",
+    "lint": "prettier --check 'src/{*,**/*}.{ts,tsx,js,jsx,json}' && eslint",
+    "package": "shx mkdir -p lib/cjs && shx echo '{ \"type\": \"commonjs\" }' > lib/cjs/package.json"
+  }
+}
