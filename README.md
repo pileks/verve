@@ -40,7 +40,7 @@ yarn test
 
 ## Web projects
 
-The `frontend`, `app-one`, and `backend` projects show a simplified example of how Verve can work using cross-origin iframes and the postMessage API.
+The `frontend`, `example`, and `backend` projects show a simplified example of how Verve can work using cross-origin iframes and the postMessage API.
 
 All parts are in active development, and may not always work until we merge in changes from our core programs.
 
@@ -74,7 +74,7 @@ All parts are in active development, and may not always work until we merge in c
 
 5. Finally, in yet another terminal, start the sample dApp:
    ```sh
-   cd app-one
+   cd example
    yarn #install dependencies if not present
    yarn dev
    ```
