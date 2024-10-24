@@ -11,11 +11,24 @@
     "src/",
     "lib/"
   ],
-  "scripts": {},
+  "scripts": {
+    "build": "pnpm run clean && tsc --build --verbose && pnpm run package",
+    "clean": "shx rm -rf lib",
+    "lint": "prettier --check 'src/{*,**/*}.{ts,tsx,js,jsx,json}' && eslint",
+    "package": "shx mkdir -p lib/cjs && shx echo '{ \"type\": \"commonjs\" }' > lib/cjs/package.json"
+  },
   "dependencies": {
     "@solana/web3.js": "^1.78.4",
     "bs58": "^6.0.0",
     "eventemitter3": "^5.0.1",
     "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^18.16.18",
+    "@typescript-eslint/eslint-plugin": "^8.11.0",
+    "@typescript-eslint/parser": "^8.11.0",
+    "typescript": "^5.6.3",
+    "shx": "^0.3.4",
+    "pnpm": "^9"
   }
 }

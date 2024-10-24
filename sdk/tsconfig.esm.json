@@ -1,36 +1,18 @@
 {
+  "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "baseUrl": "./src",
-    "outDir": "./lib/esm",
     "target": "ES5",
     "module": "ES6",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
-    "allowJs": true,
+    "sourceMap": true,
     "declaration": true,
-    "moduleResolution": "node",
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "esModuleInterop": true,
-    "noImplicitReturns": true,
-    "noImplicitThis": true,
-    "noImplicitAny": false,
-    "strictNullChecks": true,
-    "allowSyntheticDefaultImports": true,
-    "downlevelIteration": true,
-    "types": [
-      "node"
-    ]
+    "declarationMap": true,
+    "outDir": "lib/esm",
+    "declarationDir": "lib/types",
   },
   "include": [
     "src"
   ],
   "exclude": [
-    "node_modules",
-    "lib",
-    "example"
-  ]
+    "node_modules"
+  ],
 }
