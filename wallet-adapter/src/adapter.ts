@@ -169,7 +169,7 @@ export class VerveWalletAdapter extends BaseMessageSignerWalletAdapter {
     }
   }
 
-  async signAllTransactions<
+  override async signAllTransactions<
     T extends TransactionOrVersionedTransaction<
       this["supportedTransactionVersions"]
     >
@@ -193,7 +193,7 @@ export class VerveWalletAdapter extends BaseMessageSignerWalletAdapter {
     }
   }
 
-  async sendTransaction(
+  override async sendTransaction(
     transaction: TransactionOrVersionedTransaction<
       this["supportedTransactionVersions"]
     >,
@@ -244,7 +244,7 @@ export class VerveWalletAdapter extends BaseMessageSignerWalletAdapter {
     }
   }
 
-  async autoConnect(): Promise<void> {
+  override async autoConnect(): Promise<void> {
     // Skip autoconnect in the Loadable state
     // We can't redirect to a universal link without user input
     if (this.readyState === WalletReadyState.Installed) {

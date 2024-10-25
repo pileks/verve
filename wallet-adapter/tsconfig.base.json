@@ -1,14 +1,28 @@
 {
   "include": [],
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "Node",
+    /* Base Options: */
     "esModuleInterop": true,
-    "isolatedModules": true,
-    "noEmitOnError": true,
+    "skipLibCheck": true,
+    "target": "ES2022",
+    "allowJs": true,
     "resolveJsonModule": true,
+    "moduleDetection": "force",
+    "moduleResolution": "Node",
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    /* Strictness */
     "strict": true,
-    "stripInternal": true
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    /* If transpiling with TypeScript: */
+    "module": "ES2022",
+    "sourceMap": true,
+    /* If your code runs in the DOM: */
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
   }
 }
