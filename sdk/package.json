@@ -5,12 +5,10 @@
   "author": "Verve",
   "license": "Apache-2.0",
   "exports": {
-    ".": {
-      "types": "./lib/types/*.d.ts",
-      "require": "./lib/cjs/*.js",
-      "import": "./lib/esm/*.js",
-      "default": "./lib/esm/*.js"
-    }
+    "types": "./lib/types/*.d.ts",
+    "require": "./lib/cjs/*.js",
+    "import": "./lib/esm/*.js",
+    "default": "./lib/esm/*.js"
   },
   "files": [
     "src/",
