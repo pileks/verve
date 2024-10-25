@@ -4,9 +4,14 @@
   "description": "Verve SDK",
   "author": "Verve",
   "license": "Apache-2.0",
-  "main": "lib/cjs/index.js",
-  "module": "lib/esm/index.js",
-  "types": "lib/esm/index.d.ts",
+  "exports": {
+    ".": {
+      "main": "./lib/cjs/index.js",
+      "module": "./lib/esm/index.js",
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/esm/index.js"
+    }
+  },
   "files": [
     "src/",
     "lib/"
