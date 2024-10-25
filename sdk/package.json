@@ -19,8 +19,7 @@
   "scripts": {
     "clean": "shx rm -rf lib",
     "package": "shx mkdir -p lib/cjs && shx mkdir -p lib/esm && shx echo '{ \"type\": \"commonjs\" }' > lib/cjs/package.json && shx echo '{ \"type\": \"module\" }' > lib/esm/package.json",
-    "build": "pnpm run clean && tsc --build --verbose && pnpm run package",
-    "lint": "prettier --check 'src/{*,**/*}.{ts,tsx,js,jsx,json}' && eslint"
+    "build": "pnpm run clean && tsc --build --verbose && pnpm run package"
   },
   "dependencies": {
     "@solana/web3.js": "^1.78.4",
