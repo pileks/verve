@@ -1,9 +1,10 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "ES2022",
+    "declaration": true,
+    "declarationMap": true,
     "outDir": "lib/esm",
+    "declarationDir": "lib/types"
   },
   "include": [
     "src"
