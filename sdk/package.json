@@ -6,10 +6,10 @@
   "license": "Apache-2.0",
   "exports": {
     ".": {
-      "main": "./lib/cjs/index.js",
-      "module": "./lib/esm/index.js",
-      "types": "./lib/types/index.d.ts",
-      "default": "./lib/esm/index.js"
+      "types": "./lib/types/*.d.ts",
+      "require": "./lib/cjs/*.js",
+      "import": "./lib/esm/*.js",
+      "default": "./lib/esm/*.js"
     }
   },
   "files": [
@@ -17,10 +17,10 @@
     "lib/"
   ],
   "scripts": {
-    "build": "pnpm run clean && tsc --build --verbose && pnpm run package",
     "clean": "shx rm -rf lib",
-    "lint": "prettier --check 'src/{*,**/*}.{ts,tsx,js,jsx,json}' && eslint",
-    "package": "shx mkdir -p lib/cjs && shx echo '{ \"type\": \"commonjs\" }' > lib/cjs/package.json"
+    "package": "shx mkdir -p lib/cjs && shx mkdir -p lib/esm && shx echo '{ \"type\": \"commonjs\" }' > lib/cjs/package.json && shx echo '{ \"type\": \"module\" }' > lib/esm/package.json",
+    "build": "pnpm run clean && tsc --build --verbose && pnpm run package",
+    "lint": "prettier --check 'src/{*,**/*}.{ts,tsx,js,jsx,json}' && eslint"
   },
   "dependencies": {
     "@solana/web3.js": "^1.78.4",
