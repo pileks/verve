@@ -16,8 +16,8 @@ importers:
         version: 1.95.3(bufferutil@4.0.8)(utf-8-validate@5.0.10)
     devDependencies:
       '@types/node':
-        specifier: ^18.16.18
-        version: 18.19.59
+        specifier: ^22.5.1
+        version: 22.8.2
       '@typescript-eslint/eslint-plugin':
         specifier: ^8.11.0
         version: 8.11.0(@typescript-eslint/parser@8.11.0(eslint@8.57.1)(typescript@5.6.3))(eslint@8.57.1)(typescript@5.6.3)
@@ -117,8 +117,8 @@ packages:
   '@types/node@12.20.55':
     resolution: {integrity: sha512-J8xLz7q2OFulZ2cyGTLE1TbbZcjpno7FaN6zdJNrgAdrJ+DZzh/uFR6YrTb4C+nXakvud8Q4+rbhoIWlYQbUFQ==}
 
-  '@types/node@18.19.59':
-    resolution: {integrity: sha512-vizm2EqwV/7Zay+A6J3tGl9Lhr7CjZe2HmWS988sefiEmsyP9CeXEleho6i4hJk/8UtZAo0bWN4QPZZr83RxvQ==}
+  '@types/node@22.8.2':
+    resolution: {integrity: sha512-NzaRNFV+FZkvK/KLCsNdTvID0SThyrs5SHB6tsD/lajr22FGC73N2QeDPM2wHtVde8mgcXuSsHQkH5cX1pbPLw==}
 
   '@types/uuid@8.3.4':
     resolution: {integrity: sha512-c/I8ZRb51j+pYGAu5CrFMRxqZ2ke4y2grEBO5AUjgSkSk+qT2Ea+OdWElz/OiMf5MNpn2b17kuVBwZLQJXzihw==}
@@ -745,8 +745,8 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
-  undici-types@5.26.5:
-    resolution: {integrity: sha512-JlCMO+ehdEIKqlFxk6IfVoAUVmgz7cU7zD/h9XZ0qzeosSHmUJVOzSQvvYSYWXkFXC+IfLKSIffhv0sVZup6pA==}
+  undici-types@6.19.8:
+    resolution: {integrity: sha512-ve2KP6f/JnbPBFyobGHuerC9g1FYGn/F8n1LWTwNxCEzd6IfqTwUQcNXgEtmmQ6DlRrC1hrSrBnCZPokRrDHjw==}
 
   uri-js@4.4.1:
     resolution: {integrity: sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==}
@@ -909,23 +909,23 @@ snapshots:
 
   '@types/connect@3.4.38':
     dependencies:
-      '@types/node': 18.19.59
+      '@types/node': 22.8.2
 
   '@types/node@12.20.55': {}
 
-  '@types/node@18.19.59':
+  '@types/node@22.8.2':
     dependencies:
-      undici-types: 5.26.5
+      undici-types: 6.19.8
 
   '@types/uuid@8.3.4': {}
 
   '@types/ws@7.4.7':
     dependencies:
-      '@types/node': 18.19.59
+      '@types/node': 22.8.2
 
   '@types/ws@8.5.12':
     dependencies:
-      '@types/node': 18.19.59
+      '@types/node': 22.8.2
 
   '@typescript-eslint/eslint-plugin@8.11.0(@typescript-eslint/parser@8.11.0(eslint@8.57.1)(typescript@5.6.3))(eslint@8.57.1)(typescript@5.6.3)':
     dependencies:
@@ -1550,7 +1550,7 @@ snapshots:
 
   typescript@5.6.3: {}
 
-  undici-types@5.26.5: {}
+  undici-types@6.19.8: {}
 
   uri-js@4.4.1:
     dependencies:
