@@ -1,8 +1,8 @@
 import { PublicKey, type SendOptions } from "@solana/web3.js";
 import type {
   MessageHandlers,
-  VerveIframeMessage,
   VerveIframeRequest,
+  VerveIframeResponseMessage,
 } from "../types";
 import WalletAdapter from "./base";
 import bs58 from "bs58";
@@ -10,7 +10,7 @@ import { v4 } from "uuid";
 
 export default class EmbeddedAdapter extends WalletAdapter {
   private _iframe: HTMLIFrameElement;
-  private _publicKey: PublicKey | null = null;
+  private _publicKey: PublicKey | undefined;
   private _messageHandlers: MessageHandlers = {};
 
   constructor(iframe: HTMLIFrameElement, publicKey: any) {
@@ -20,7 +20,7 @@ export default class EmbeddedAdapter extends WalletAdapter {
     this._publicKey = new PublicKey(publicKey?.toString());
   }
 
-  override get publicKey(): PublicKey | null {
+  override get publicKey(): PublicKey | undefined {
     return this._publicKey;
   }
 
@@ -127,9 +127,11 @@ export default class EmbeddedAdapter extends WalletAdapter {
     }
   }
 
-  override handleMessage(data: VerveIframeMessage): void {
-    if (this._messageHandlers[data.id] != undefined) {
-      const { resolve, reject } = this._messageHandlers[data.id];
+  override handleMessage(data: VerveIframeResponseMessage): void {
+    const messageHandler = this._messageHandlers[data.id];
+
+    if (messageHandler) {
+      const { resolve, reject } = messageHandler;
 
       delete this._messageHandlers[data.id];
 

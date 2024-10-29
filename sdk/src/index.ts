@@ -1,18 +1,21 @@
 import { EventEmitter } from "eventemitter3";
-import type { PromiseCallback, VerveConfig } from "./types";
-import type { Cluster } from "@solana/web3.js";
+import type { Cluster, PublicKey } from "@solana/web3.js";
+import type { PromiseCallback, VerveConfig, VerveIframeMessage } from "./types";
+import type WalletAdapter from "./adapters/base";
 
 export default class Verve extends EventEmitter {
   private _network: Cluster = "mainnet-beta";
-  private _provider: string | null = null;
+  private _provider: string | undefined;
   private _iframeParams: Record<string, any> = {};
-  // private _adapterInstance: WalletAdapter | null = null;
-  private _element: HTMLElement | null = null;
-  private _iframe: HTMLIFrameElement | null = null;
-  private _connectHandler: {
-    resolve: PromiseCallback;
-    reject: PromiseCallback;
-  } | null = null;
+  private _adapterInstance: WalletAdapter | undefined;
+  private _element: HTMLElement | undefined;
+  private _iframe: HTMLIFrameElement | undefined;
+  private _connectHandler:
+    | {
+        resolve: PromiseCallback;
+        reject: PromiseCallback;
+      }
+    | undefined;
 
   private _iframeUrl = "http://localhost:5173/";
   private _iframeOrigin = new URL(this._iframeUrl).origin;
@@ -35,6 +38,38 @@ export default class Verve extends EventEmitter {
     }
 
     this._iframe = this._createIframe();
+  }
+
+  public get publicKey(): PublicKey | undefined {
+    return this._adapterInstance?.publicKey;
+  }
+
+  public get connected(): boolean {
+    return !!this._adapterInstance?.connected;
+  }
+
+  public async connect(): Promise<void> {
+    if (this.connected) {
+      return;
+    }
+
+    this._createIframe();
+
+    await new Promise((resolve, reject) => {
+      this._connectHandler = { resolve, reject };
+    });
+  }
+
+  async disconnect() {
+    if (!this._adapterInstance) {
+      return;
+    }
+
+    await this._adapterInstance.disconnect();
+
+    this._disconnected();
+
+    this.emit("disconnect");
   }
 
   private _createIframe(): HTMLIFrameElement {
@@ -98,11 +133,26 @@ export default class Verve extends EventEmitter {
     }
   }
 
+  private _disconnected = () => {
+    window.removeEventListener("message", this._handleMessage, false);
+    this._removeIframe();
+
+    this._adapterInstance = undefined;
+  };
+
+  private _handleMessage = (event: MessageEvent) => {
+    if (event.data?.channel !== "solflareIframeToWalletAdapter") {
+      return;
+    }
+
+    const data: VerveIframeMessage = event.data.data || {};
+  };
+
   private _removeIframe(): void {
     if (this._iframe) {
       this._iframe.remove();
 
-      this._iframe = null;
+      this._iframe = undefined;
     }
   }
 }

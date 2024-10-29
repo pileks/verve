@@ -3,7 +3,7 @@ import { PublicKey, type SendOptions } from "@solana/web3.js";
 import type { VerveIframeMessage } from "../types";
 
 export default abstract class WalletAdapter extends EventEmitter {
-  abstract get publicKey(): PublicKey | null;
+  abstract get publicKey(): PublicKey | undefined;
   abstract get connected(): boolean;
 
   abstract connect(): Promise<void>;
