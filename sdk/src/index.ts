@@ -1,7 +1,14 @@
 import { EventEmitter } from "eventemitter3";
-import type { Cluster, PublicKey } from "@solana/web3.js";
+import {
+  Transaction,
+  VersionedTransaction,
+  type Cluster,
+  type PublicKey,
+  type SendOptions,
+} from "@solana/web3.js";
 import type { PromiseCallback, VerveConfig, VerveIframeMessage } from "./types";
 import type WalletAdapter from "./adapters/base";
+import { isLegacyTransactionInstance } from "./utils";
 
 export default class Verve extends EventEmitter {
   private _network: Cluster = "mainnet-beta";
@@ -60,7 +67,7 @@ export default class Verve extends EventEmitter {
     });
   }
 
-  async disconnect() {
+  async disconnect(): Promise<void> {
     if (!this._adapterInstance) {
       return;
     }
@@ -70,6 +77,98 @@ export default class Verve extends EventEmitter {
     this._disconnected();
 
     this.emit("disconnect");
+  }
+
+  async signTransaction(
+    transaction: Transaction | VersionedTransaction
+  ): Promise<Transaction | VersionedTransaction> {
+    if (!this.connected) {
+      throw new Error("Wallet not connected");
+    }
+
+    const serializedTransaction = isLegacyTransactionInstance(transaction)
+      ? Uint8Array.from(
+          transaction.serialize({
+            verifySignatures: false,
+            requireAllSignatures: false,
+          })
+        )
+      : transaction.serialize();
+
+    const signedTransaction = await this._adapterInstance!.signTransaction(
+      serializedTransaction
+    );
+
+    return isLegacyTransactionInstance(transaction)
+      ? Transaction.from(signedTransaction)
+      : VersionedTransaction.deserialize(signedTransaction);
+  }
+
+  async signAllTransactions(
+    transactions: Transaction[] | VersionedTransaction[]
+  ): Promise<(Transaction | VersionedTransaction)[]> {
+    if (!this.connected) {
+      throw new Error("Wallet not connected");
+    }
+
+    const serializedTransactions = transactions.map((transaction) => {
+      return isLegacyTransactionInstance(transaction)
+        ? Uint8Array.from(
+            transaction.serialize({
+              verifySignatures: false,
+              requireAllSignatures: false,
+            })
+          )
+        : transaction.serialize();
+    });
+
+    const signedTransactions = await this._adapterInstance!.signAllTransactions(
+      serializedTransactions
+    );
+
+    if (signedTransactions.length !== transactions.length) {
+      throw new Error("Failed to sign all transactions");
+    }
+
+    return signedTransactions.map((signedTransaction, index) => {
+      return isLegacyTransactionInstance(transactions[index]!)
+        ? Transaction.from(signedTransaction)
+        : VersionedTransaction.deserialize(signedTransaction);
+    });
+  }
+
+  async signAndSendTransaction(
+    transaction: Transaction | VersionedTransaction,
+    options?: SendOptions
+  ): Promise<string> {
+    if (!this.connected) {
+      throw new Error("Wallet not connected");
+    }
+
+    const serializedTransaction = isLegacyTransactionInstance(transaction)
+      ? Uint8Array.from(
+          transaction.serialize({
+            verifySignatures: false,
+            requireAllSignatures: false,
+          })
+        )
+      : transaction.serialize();
+
+    return await this._adapterInstance!.signAndSendTransaction(
+      serializedTransaction,
+      options
+    );
+  }
+
+  async signMessage(
+    data: Uint8Array,
+    display: "hex" | "utf8" = "utf8"
+  ): Promise<Uint8Array> {
+    if (!this.connected) {
+      throw new Error("Wallet not connected");
+    }
+
+    return await this._adapterInstance!.signMessage(data, display);
   }
 
   private _createIframe(): HTMLIFrameElement {
