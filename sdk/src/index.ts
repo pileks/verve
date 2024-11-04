@@ -9,6 +9,7 @@ import {
 import type { PromiseCallback, VerveConfig, VerveIframeMessage } from "./types";
 import type WalletAdapter from "./adapters/base";
 import { isLegacyTransactionInstance } from "./utils";
+import EmbeddedAdapter from "./adapters/embedded";
 
 export default class Verve extends EventEmitter {
   private _network: Cluster = "mainnet-beta";
@@ -45,6 +46,7 @@ export default class Verve extends EventEmitter {
     }
 
     this._iframe = this._createIframe();
+    this._adapterInstance = new EmbeddedAdapter(this._iframe, this.publicKey);
   }
 
   public get publicKey(): PublicKey | undefined {
