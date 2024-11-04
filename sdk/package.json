@@ -20,12 +20,12 @@
     "build": "pnpm run clean && tsc --build --verbose && pnpm run package"
   },
   "dependencies": {
-    "@solana/web3.js": "^1.78.4",
     "bs58": "^6.0.0",
     "eventemitter3": "^5.0.1",
     "uuid": "^10.0.0"
   },
   "devDependencies": {
+    "@solana/web3.js": "^1.78.4",
     "@types/node": "^22.5.1",
     "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^8.11.0",
