@@ -16,16 +16,17 @@
   ],
   "scripts": {
     "clean": "shx rm -rf lib",
+    "reset": "shx rm -rf node_modules && pnpm i",
     "package": "shx mkdir -p lib/cjs && shx mkdir -p lib/esm && shx echo '{ \"type\": \"commonjs\" }' > lib/cjs/package.json && shx echo '{ \"type\": \"module\" }' > lib/esm/package.json",
     "build": "pnpm run clean && tsc --build --verbose && pnpm run package"
   },
   "dependencies": {
+    "@solana/web3.js": "^1.78.4",
     "bs58": "^6.0.0",
     "eventemitter3": "^5.0.1",
     "uuid": "^10.0.0"
   },
   "devDependencies": {
-    "@solana/web3.js": "^1.78.4",
     "@types/node": "^22.5.1",
     "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^8.11.0",
