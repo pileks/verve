@@ -13,11 +13,11 @@ export default class EmbeddedAdapter extends WalletAdapter {
   private _publicKey: PublicKey | undefined;
   private _messageHandlers: MessageHandlers = {};
 
-  constructor(iframe: HTMLIFrameElement, publicKey: any) {
+  constructor(iframe: HTMLIFrameElement) {
     super();
 
     this._iframe = iframe;
-    this._publicKey = new PublicKey(publicKey?.toString());
+    // this._publicKey = new PublicKey(publicKey?.toString());
   }
 
   override get publicKey(): PublicKey | undefined {
@@ -29,7 +29,23 @@ export default class EmbeddedAdapter extends WalletAdapter {
   }
 
   override async connect(): Promise<void> {
-    // nothing to do here
+    if (this.connected) {
+      throw new Error("Wallet is already connected");
+    }
+
+    try {
+      const publicKey = (await this._sendMessage({
+        method: "connect",
+        params: {
+          // TBD
+        },
+      })) as string;
+
+      this._publicKey = new PublicKey(publicKey);
+    } catch (e) {
+      throw new Error(e?.toString?.() || "Failed to connect");
+    }
+
     return new Promise((resolve) => resolve());
   }
 
@@ -155,7 +171,7 @@ export default class EmbeddedAdapter extends WalletAdapter {
 
       this._iframe?.contentWindow?.postMessage(
         {
-          channel: "solflareWalletAdapterToIframe",
+          channel: "verveWalletAdapterToIframe",
           data: { id: messageId, ...data },
         },
         "*"

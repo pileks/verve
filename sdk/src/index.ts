@@ -46,7 +46,7 @@ export default class Verve extends EventEmitter {
     }
 
     this._iframe = this._createIframe();
-    this._adapterInstance = new EmbeddedAdapter(this._iframe, this.publicKey);
+    this._adapterInstance = new EmbeddedAdapter(this._iframe);
   }
 
   public get publicKey(): PublicKey | undefined {
@@ -242,7 +242,7 @@ export default class Verve extends EventEmitter {
   };
 
   private _handleMessage = (event: MessageEvent) => {
-    if (event.data?.channel !== "solflareIframeToWalletAdapter") {
+    if (event.data?.channel !== "verveIframeToWalletAdapter") {
       return;
     }
 
