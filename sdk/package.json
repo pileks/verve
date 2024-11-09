@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Verve SDK",
   "author": "Verve",
-  "license": "Apache-2.0",
+  "license": "AGPL-3.0-only",
   "exports": {
     "types": "./lib/types/*.d.ts",
     "require": "./lib/cjs/*.js",
@@ -16,22 +16,17 @@
   ],
   "scripts": {
     "clean": "shx rm -rf lib",
-    "reset": "shx rm -rf node_modules && pnpm i",
+    "reset": "shx rm -rf node_modules && yarn",
     "package": "shx mkdir -p lib/cjs && shx mkdir -p lib/esm && shx echo '{ \"type\": \"commonjs\" }' > lib/cjs/package.json && shx echo '{ \"type\": \"module\" }' > lib/esm/package.json",
-    "build": "pnpm run clean && tsc --build --verbose && pnpm run package"
+    "build": "yarn clean && tsc --build --verbose && yarn package"
   },
   "dependencies": {
-    "@solana/web3.js": "^1.78.4",
-    "bs58": "^6.0.0",
-    "eventemitter3": "^5.0.1",
-    "uuid": "^10.0.0"
+    "@solana/web3.js": "^1.78.4"
   },
   "devDependencies": {
     "@types/node": "^22.5.1",
-    "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^8.11.0",
     "@typescript-eslint/parser": "^8.11.0",
-    "pnpm": "^9",
     "shx": "^0.3.4",
     "typescript": "^5.6.3"
   }
