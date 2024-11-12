@@ -1,0 +1,23 @@
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+  test: {
+    include: ["tests/*.test.ts"],
+    testTimeout: 1000000,
+    coverage: {
+      enabled: true,
+      all: true,
+      provider: "istanbul",
+      include: ["src/**/*.ts"],
+      reportOnFailure: true,
+    },
+    silent: false,
+    disableConsoleIntercept: false,
+    typecheck: {
+      enabled: true,
+      checker: "tsc",
+      include: ["src/**/*.ts"],
+      ignoreSourceErrors: false,
+    },
+  },
+});

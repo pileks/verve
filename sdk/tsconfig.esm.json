@@ -10,7 +10,9 @@
     "src"
   ],
   "exclude": [
+    "coverage",
+    "lib",
     "node_modules",
-    "lib"
+    "tests",
   ],
 }
