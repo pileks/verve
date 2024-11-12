@@ -6,7 +6,14 @@ import prettierConfig from "eslint-config-prettier";
 /** @type {import('eslint').Linter.Config[]} */
 export default [
   { files: ["**/*.{js,mjs,cjs,ts}"] },
-  { ignores: ["coverage/", "lib/", "node_modules/", "eslint.config.mjs"] },
+  {
+    ignores: [
+      "coverage/",
+      "lib/",
+      "node_modules/",
+      "tsconfig.vitest-temp.json",
+    ],
+  },
   { languageOptions: { globals: globals.browser } },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
