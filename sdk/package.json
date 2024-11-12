@@ -20,16 +20,25 @@
     "package:cjs": "shx mkdir -p lib/cjs && shx echo '{ \"type\": \"commonjs\" }' > lib/cjs/package.json",
     "package:esm": "shx mkdir -p lib/esm && shx echo '{ \"type\": \"module\" }' > lib/esm/package.json",
     "package": "yarn package:cjs && yarn package:esm",
-    "build": "yarn clean && tsc --build --verbose && yarn package"
+    "build": "yarn clean && tsc --build --verbose && yarn package",
+    "lint": "eslint",
+    "lint:fix": "eslint --fix"
   },
   "dependencies": {
     "@solana/web3.js": "^1.95.4"
   },
   "devDependencies": {
+    "@eslint/js": "^9.14.0",
+    "@types/eslint-config-prettier": "^6.11.3",
     "@types/node": "^22",
-    "@typescript-eslint/eslint-plugin": "^8.13.0",
-    "@typescript-eslint/parser": "^8.13.0",
+    "@typescript-eslint/eslint-plugin": "^8.14.0",
+    "@typescript-eslint/parser": "^8.14.0",
+    "eslint": "^9.14.0",
+    "eslint-config-prettier": "^9.1.0",
+    "globals": "^15.12.0",
+    "prettier": "^3.3.3",
     "shx": "^0.3.4",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.14.0"
   }
 }
