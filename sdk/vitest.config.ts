@@ -17,7 +17,8 @@ export default defineConfig({
       enabled: true,
       checker: "tsc",
       include: ["src/**/*.ts"],
-      ignoreSourceErrors: false,
+      only: false,
+      tsconfig: "./tsconfig.json",
     },
   },
 });
