@@ -373,14 +373,8 @@ pub enum AaError {
     #[msg("Wallet mismatch")]
     WalletMismatch,
 
-    #[msg("Invalid token")]
-    InvalidToken,
-
-    #[msg("Invalid algorithm")]
-    InvalidAlgorithm,
-
-    #[msg("Invalid signature")]
-    InvalidSignature,
+    #[msg("Invalid guardian signature")]
+    InvalidGuardianSignature,
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
@@ -405,7 +399,7 @@ mod shared {
 
         match dalek_pubkey.verify(message, &dalek_signature) {
             Ok(_) => Ok(()),
-            Err(_) => Err(error!(AaError::InvalidSignature)),
+            Err(_) => Err(error!(AaError::InvalidGuardianSignature)),
         }
     }
 }
