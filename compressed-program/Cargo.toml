@@ -32,3 +32,7 @@ codegen-units = 1
 "solana-frozen-abi" = { git = "https://github.com/lightprotocol/agave", branch = "v1.18.22-enforce-cpi-tracking" }
 "solana-frozen-abi-macro" = { git = "https://github.com/lightprotocol/agave", branch = "v1.18.22-enforce-cpi-tracking" }
 "solana-transaction-status" = { git = "https://github.com/lightprotocol/agave", branch = "v1.18.22-enforce-cpi-tracking" }
+
+[patch.crates-io.curve25519-dalek]
+git = "https://github.com/solana-labs/curve25519-dalek.git"
+rev = "b500cdc2a920cd5bff9e2dd974d7b97349d61464"

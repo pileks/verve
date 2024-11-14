@@ -132,6 +132,76 @@ pub mod compressed_aa_poc {
         Ok(())
     }
 
+
+    pub fn exec_instruction_alt<'info>(
+        ctx: LightContext<'_, '_, '_, 'info, ExecInstructionAlt<'info>>,
+        instruction_data: Vec<u8>,
+        signature: [u8; 64]
+    ) -> Result<()> {
+        require!(
+            ctx.accounts
+                .guardian
+                .key()
+                .eq(&ctx.light_accounts.wallet_guardian.guardian.key()),
+            AaError::GuardianMismatch
+        );
+
+        require!(
+            ctx.accounts
+                .wallet
+                .key()
+                .eq(&ctx.light_accounts.wallet_guardian.wallet.key()),
+            AaError::WalletMismatch
+        );
+
+        shared::verify_ix_signature(&ctx.accounts.guardian.key(), &instruction_data, &signature)?;
+
+        let instruction = VerveInstruction::try_from_slice(&instruction_data)?;
+
+        let mut account_metas: Vec<AccountMeta> = vec![];
+
+        for (i, account_index) in instruction.account_indices.iter().enumerate() {
+            let account_key = ctx.remaining_accounts[*account_index as usize].key();
+            let is_writable = instruction.writable_accounts[i];
+            let is_signer = instruction.signer_accounts[i];
+
+            let account_meta = if is_writable {
+                AccountMeta::new(account_key, is_signer)
+            } else {
+                AccountMeta::new_readonly(account_key, is_signer)
+            };
+
+            account_metas.push(account_meta);
+        }
+
+        let instruction = Instruction {
+            accounts: account_metas,
+            data: instruction_data,
+            program_id: ctx.remaining_accounts[4].key(),
+        };
+
+        let seed_guardian_key = ctx.accounts.seed_guardian.key();
+
+        let seeds = [
+            &PDA_WALLET_SEED[..],
+            seed_guardian_key.as_ref(),
+            &[ctx.bumps.wallet][..],
+        ];
+
+        let signer_seeds = &[&seeds[..]];
+
+        let cpi_accounts: Vec<AccountInfo<'info>> = ctx.remaining_accounts[5..].to_vec();
+
+        anchor_lang::solana_program::program::invoke_signed(
+            &instruction,
+            &cpi_accounts,
+            signer_seeds,
+        )?;
+
+        Ok(())
+    }
+
+
     pub fn generate_idl_types_noop(_ctx: Context<GenerateIdls>, _types: Types) -> Result<()> {
         Ok(())
     }
@@ -252,6 +322,41 @@ pub struct ExecInstruction<'info> {
     pub cpi_signer: AccountInfo<'info>,
 }
 
+#[light_accounts]
+pub struct ExecInstructionAlt<'info> {
+    /// CHECK: No need to have this account initialized lol
+    #[account(
+        seeds=[PDA_WALLET_SEED, seed_guardian.key().as_ref()],
+        bump
+    )]
+    pub wallet: AccountInfo<'info>,
+
+    #[light_account(
+        mut,
+        seeds=[PDA_WALLET_GUARDIAN_SEED, wallet.key().as_ref(), guardian.key().as_ref()],
+    )]
+    pub wallet_guardian: LightAccount<WalletGuardian>,
+
+    /// CHECK: we use this to determine the account we're invoking for.
+    /// The actual access check happens using wallet_guardian.
+    #[account()]
+    pub seed_guardian: AccountInfo<'info>,
+
+    #[account()]
+    pub guardian: Signer<'info>,
+
+    #[account(mut)]
+    #[fee_payer]
+    pub payer: Signer<'info>,
+
+    #[self_program]
+    pub self_program: Program<'info, crate::program::CompressedAaPoc>,
+
+    /// CHECK: Checked in light-system-program.
+    #[authority]
+    pub cpi_signer: AccountInfo<'info>,
+}
+
 #[derive(Accounts)]
 pub struct GenerateIdls {}
 
@@ -276,4 +381,31 @@ pub enum AaError {
 
     #[msg("Invalid signature")]
     InvalidSignature,
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+pub struct VerveInstruction {
+    pub data: Vec<u8>,
+    pub account_indices: Vec<u8>,
+    pub writable_accounts: Vec<bool>,
+    pub signer_accounts: Vec<bool>,
+    pub program_account_index: u8,
+}
+
+mod shared {
+    use anchor_lang::prelude::*;
+    use ed25519_dalek::{Signature, Verifier, VerifyingKey};
+
+    use crate::AaError;
+
+    pub fn verify_ix_signature(pubkey: &Pubkey, message: &[u8], signature: &[u8; 64]) -> Result<()> {
+        let dalek_pubkey = VerifyingKey::from_bytes(&pubkey.to_bytes())
+            .map_err(|_| ProgramError::InvalidArgument)?;
+        let dalek_signature = Signature::from_bytes(signature);
+
+        match dalek_pubkey.verify(message, &dalek_signature) {
+            Ok(_) => Ok(()),
+            Err(_) => Err(error!(AaError::InvalidSignature)),
+        }
+    }
 }
