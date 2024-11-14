@@ -388,9 +388,6 @@ export class CompressedAaPocProgram extends AaPocConstants {
       rootIndex,
     } = this.packWithInput([walletGuardianAccount], [], [], proof);
 
-    const { accounts, writables, signers } =
-      this.getAccountsWritablesSignersForInstruction(testIx);
-
     const testIxRemainingAccounts = [
       {
         isSigner: false,
@@ -407,7 +404,7 @@ export class CompressedAaPocProgram extends AaPocConstants {
       ),
     ];
 
-    const schema = <Schema>{
+    const verveInstructionSchema = <Schema>{
       struct: {
         data: { array: { type: "u8" } },
         accountIndices: { array: { type: "u8" } },
@@ -417,13 +414,19 @@ export class CompressedAaPocProgram extends AaPocConstants {
       },
     };
 
-    const data = <VerveInstruction>{
+    const verveInstruction = <VerveInstruction>{
       data: testIx.data,
     };
 
-    const serializedData = serialize(schema, data);
+    const serializedInstructionData = serialize(
+      verveInstructionSchema,
+      verveInstruction
+    );
 
-    const signature = sign.detached(serializedData, ixSigners[0].secretKey);
+    const signature = sign.detached(
+      serializedInstructionData,
+      ixSigners[0].secretKey
+    );
 
     const ix = await CompressedAaPocProgram.getInstance()
       .program.methods.execInstructionAlt(
@@ -433,7 +436,7 @@ export class CompressedAaPocProgram extends AaPocConstants {
         rootIndex, // merkleTreeRootIndex
         addressMerkleContext, // addressMerkleContext
         addressMerkleTreeRootIndex, // addressMerkleTreeRootIndex
-        Buffer.from(serializedData), // instructionData
+        Buffer.from(serializedInstructionData), // instructionData
         Array.from(signature) // signature
       )
       .accounts({
@@ -449,6 +452,11 @@ export class CompressedAaPocProgram extends AaPocConstants {
       ])
       .signers(ixSigners)
       .instruction();
+
+    return {
+      instruction: ix,
+      walletGuardianAddress,
+    };
   }
 
   private static packWithInput(
