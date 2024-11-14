@@ -132,11 +132,10 @@ pub mod compressed_aa_poc {
         Ok(())
     }
 
-
     pub fn exec_instruction_alt<'info>(
         ctx: LightContext<'_, '_, '_, 'info, ExecInstructionAlt<'info>>,
         instruction_data: Vec<u8>,
-        signature: [u8; 64]
+        signature: [u8; 64],
     ) -> Result<()> {
         require!(
             ctx.accounts
@@ -200,7 +199,6 @@ pub mod compressed_aa_poc {
 
         Ok(())
     }
-
 
     pub fn generate_idl_types_noop(_ctx: Context<GenerateIdls>, _types: Types) -> Result<()> {
         Ok(())
@@ -363,6 +361,7 @@ pub struct GenerateIdls {}
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct Types {
     wallet_guardian: WalletGuardian,
+    verve_instruction: VerveInstruction,
 }
 
 #[error_code]
@@ -392,7 +391,11 @@ mod shared {
 
     use crate::AaError;
 
-    pub fn verify_ix_signature(pubkey: &Pubkey, message: &[u8], signature: &[u8; 64]) -> Result<()> {
+    pub fn verify_ix_signature(
+        pubkey: &Pubkey,
+        message: &[u8],
+        signature: &[u8; 64],
+    ) -> Result<()> {
         let dalek_pubkey = VerifyingKey::from_bytes(&pubkey.to_bytes())
             .map_err(|_| ProgramError::InvalidArgument)?;
         let dalek_signature = Signature::from_bytes(signature);

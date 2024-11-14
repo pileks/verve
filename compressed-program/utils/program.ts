@@ -1,7 +1,7 @@
 import { BN, getProvider, Program } from "@coral-xyz/anchor";
 import idl from "../target/idl/compressed_aa_poc.json";
 import { CompressedAaPoc } from "../target/types/compressed_aa_poc";
-import { WalletGuardian } from "./types";
+import { WalletGuardian, VerveInstruction } from "./types";
 import {
   AaPocConstants,
   PDA_WALLET_GUARDIAN_SEED,
@@ -30,6 +30,8 @@ import {
   Rpc,
   toAccountMetas,
 } from "@lightprotocol/stateless.js";
+import { Schema, serialize } from "borsh";
+import { sign } from "tweetnacl";
 
 export class CompressedAaPocProgram extends AaPocConstants {
   private static instance: CompressedAaPocProgram;
@@ -352,6 +354,101 @@ export class CompressedAaPocProgram extends AaPocConstants {
       instruction: ix,
       walletGuardianAddress,
     };
+  }
+
+  private static async execInstructionAltIx(
+    rpc: Rpc,
+    seedGuardian: PublicKey,
+    guardian: PublicKey,
+    testIx: TransactionInstruction,
+    ixSigners: Array<Signer>
+  ) {
+    const wallet = this.deriveWalletAddress(seedGuardian);
+
+    const walletGuardianSeed = this.deriveWalletGuardianSeed(wallet, guardian); // address_seed
+
+    const walletGuardianAddress: PublicKey = deriveAddress(
+      walletGuardianSeed,
+      this.addressTree
+    );
+
+    const walletGuardianAccount = await rpc.getCompressedAccount(
+      new BN(walletGuardianAddress.toBytes())
+    );
+
+    const inputleafhashes = [bn(walletGuardianAccount.hash)];
+
+    const proof = await this.getValidityProof(rpc, inputleafhashes, undefined);
+
+    const {
+      addressMerkleContext,
+      addressMerkleTreeRootIndex,
+      merkleContext,
+      remainingAccounts: lightRemainingAccounts,
+      rootIndex,
+    } = this.packWithInput([walletGuardianAccount], [], [], proof);
+
+    const { accounts, writables, signers } =
+      this.getAccountsWritablesSignersForInstruction(testIx);
+
+    const testIxRemainingAccounts = [
+      {
+        isSigner: false,
+        isWritable: false,
+        pubkey: testIx.programId,
+      } as AccountMeta,
+      ...testIx.keys.map(
+        (x) =>
+          <AccountMeta>{
+            isSigner: false,
+            isWritable: x.isWritable,
+            pubkey: x.pubkey,
+          }
+      ),
+    ];
+
+    const schema = <Schema>{
+      struct: {
+        data: { array: { type: "u8" } },
+        accountIndices: { array: { type: "u8" } },
+        writableAccounts: { array: { type: "bool" } },
+        signerAccounts: { array: { type: "bool" } },
+        programAccountIndex: "u8",
+      },
+    };
+
+    const data = <VerveInstruction>{
+      data: testIx.data,
+    };
+
+    const serializedData = serialize(schema, data);
+
+    const signature = sign.detached(serializedData, ixSigners[0].secretKey);
+
+    const ix = await CompressedAaPocProgram.getInstance()
+      .program.methods.execInstructionAlt(
+        [walletGuardianAccount.data.data], // inputs
+        proof.compressedProof, // proof
+        merkleContext, // merkleContext
+        rootIndex, // merkleTreeRootIndex
+        addressMerkleContext, // addressMerkleContext
+        addressMerkleTreeRootIndex, // addressMerkleTreeRootIndex
+        Buffer.from(serializedData), // instructionData
+        Array.from(signature) // signature
+      )
+      .accounts({
+        payer: guardian,
+        seedGuardian: seedGuardian,
+        guardian: guardian,
+        wallet: wallet,
+        ...this.lightAccounts,
+      })
+      .remainingAccounts([
+        ...toAccountMetas(lightRemainingAccounts),
+        ...testIxRemainingAccounts,
+      ])
+      .signers(ixSigners)
+      .instruction();
   }
 
   private static packWithInput(
