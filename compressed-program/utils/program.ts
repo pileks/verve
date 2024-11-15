@@ -10,6 +10,7 @@ import {
 import {
   AccountMeta,
   ComputeBudgetProgram,
+  Keypair,
   PublicKey,
   Signer,
   TransactionInstruction,
@@ -125,6 +126,31 @@ export class CompressedAaPocProgram extends AaPocConstants {
       testIx,
       signers
     );
+
+    const tx = await this.buildTxWithComputeBudget(
+      rpc,
+      [instruction],
+      seedGuardian
+    );
+
+    return { transaction: tx, walletGuardianAddress };
+  }
+
+  static async execInstructionAltTx(
+    rpc: Rpc,
+    seedGuardian: PublicKey,
+    guardian: Keypair,
+    testIx: TransactionInstruction,
+    signers: Array<Signer>
+  ) {
+    const { instruction, walletGuardianAddress } =
+      await this.execInstructionAltIx(
+        rpc,
+        seedGuardian,
+        guardian,
+        testIx,
+        signers
+      );
 
     const tx = await this.buildTxWithComputeBudget(
       rpc,
@@ -359,13 +385,16 @@ export class CompressedAaPocProgram extends AaPocConstants {
   private static async execInstructionAltIx(
     rpc: Rpc,
     seedGuardian: PublicKey,
-    guardian: PublicKey,
+    guardian: Keypair,
     testIx: TransactionInstruction,
     ixSigners: Array<Signer>
   ) {
     const wallet = this.deriveWalletAddress(seedGuardian);
 
-    const walletGuardianSeed = this.deriveWalletGuardianSeed(wallet, guardian); // address_seed
+    const walletGuardianSeed = this.deriveWalletGuardianSeed(
+      wallet,
+      guardian.publicKey
+    ); // address_seed
 
     const walletGuardianAddress: PublicKey = deriveAddress(
       walletGuardianSeed,
@@ -404,6 +433,11 @@ export class CompressedAaPocProgram extends AaPocConstants {
       ),
     ];
 
+    const remainingAccounts = [
+      ...toAccountMetas(lightRemainingAccounts),
+      ...testIxRemainingAccounts,
+    ];
+
     const verveInstructionSchema = <Schema>{
       struct: {
         data: { array: { type: "u8" } },
@@ -414,8 +448,20 @@ export class CompressedAaPocProgram extends AaPocConstants {
       },
     };
 
+    const programAccountIndex = remainingAccounts.findIndex(
+      (x) => x.pubkey === testIx.programId
+    );
+
+    const cpiAccounts = remainingAccounts.slice(programAccountIndex + 1);
+
     const verveInstruction = <VerveInstruction>{
       data: testIx.data,
+      accountIndices: Buffer.from(
+        cpiAccounts.map((account) => remainingAccounts.indexOf(account))
+      ),
+      writableAccounts: cpiAccounts.map((account) => account.isWritable),
+      signerAccounts: cpiAccounts.map((account) => account.isSigner),
+      programAccountIndex: programAccountIndex,
     };
 
     const serializedInstructionData = serialize(
@@ -423,9 +469,30 @@ export class CompressedAaPocProgram extends AaPocConstants {
       verveInstruction
     );
 
+    // sign using guardian private key
     const signature = sign.detached(
       serializedInstructionData,
-      ixSigners[0].secretKey
+      guardian.secretKey
+    );
+
+    // verify using guardian public key
+    const result = sign.detached.verify(
+      serializedInstructionData,
+      signature,
+      guardian.publicKey.toBytes()
+    );
+
+    if (!result) {
+      throw "message verification error, abandoning ix build...";
+    }
+
+    console.log("is message valid: ", result);
+
+    console.log("instuction data: ", serializedInstructionData);
+
+    console.log(
+      "instuction data buffer: ",
+      Buffer.from(serializedInstructionData)
     );
 
     const ix = await CompressedAaPocProgram.getInstance()
@@ -440,16 +507,22 @@ export class CompressedAaPocProgram extends AaPocConstants {
         Array.from(signature) // signature
       )
       .accounts({
-        payer: guardian,
+        payer: guardian.publicKey,
         seedGuardian: seedGuardian,
-        guardian: guardian,
+        guardian: guardian.publicKey,
         wallet: wallet,
-        ...this.lightAccounts,
+        selfProgram: this.lightAccounts().selfProgram,
+        accountCompressionAuthority:
+          this.lightAccounts().accountCompressionAuthority,
+        accountCompressionProgram:
+          this.lightAccounts().accountCompressionProgram,
+        cpiSigner: this.lightAccounts().cpiSigner,
+        lightSystemProgram: this.lightAccounts().lightSystemProgram,
+        noopProgram: this.lightAccounts().noopProgram,
+        registeredProgramPda: this.lightAccounts().registeredProgramPda,
+        systemProgram: this.lightAccounts().systemProgram,
       })
-      .remainingAccounts([
-        ...toAccountMetas(lightRemainingAccounts),
-        ...testIxRemainingAccounts,
-      ])
+      .remainingAccounts(remainingAccounts)
       .signers(ixSigners)
       .instruction();
 
@@ -629,7 +702,7 @@ export class CompressedAaPocProgram extends AaPocConstants {
     payerPubkey: PublicKey
   ): Promise<VersionedTransaction> {
     const setComputeUnitIx = ComputeBudgetProgram.setComputeUnitLimit({
-      units: 1_000_000,
+      units: 2_000_000_000,
     });
 
     instructions.unshift(setComputeUnitIx);

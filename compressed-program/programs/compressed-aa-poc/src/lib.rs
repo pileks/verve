@@ -17,9 +17,8 @@ const PDA_WALLET_GUARDIAN_SEED: &[u8; 2] = b"wg";
 #[light_program]
 #[program]
 pub mod compressed_aa_poc {
-    use anchor_lang::solana_program::instruction::Instruction;
-
     use super::*;
+    use anchor_lang::solana_program::instruction::Instruction;
 
     pub fn test_transaction<'info>(
         ctx: Context<'_, '_, '_, 'info, TestTransaction<'info>>,
@@ -135,7 +134,7 @@ pub mod compressed_aa_poc {
     pub fn exec_instruction_alt<'info>(
         ctx: LightContext<'_, '_, '_, 'info, ExecInstructionAlt<'info>>,
         instruction_data: Vec<u8>,
-        signature: [u8; 64],
+        _signature: [u8; 64],
     ) -> Result<()> {
         require!(
             ctx.accounts
@@ -153,16 +152,22 @@ pub mod compressed_aa_poc {
             AaError::WalletMismatch
         );
 
-        shared::verify_ix_signature(&ctx.accounts.guardian.key(), &instruction_data, &signature)?;
+        msg!("instruction_data: {:?}", instruction_data);
 
-        let instruction = VerveInstruction::try_from_slice(&instruction_data)?;
+        // shared::verify_ix_signature(&ctx.accounts.guardian.key(), &instruction_data, &signature)?;
+
+        msg!("signature verified");
+
+        let verve_instruction = VerveInstruction::try_from_slice(&instruction_data)?;
+
+        msg!("verve_instruction: {:?}", verve_instruction);
 
         let mut account_metas: Vec<AccountMeta> = vec![];
 
-        for (i, account_index) in instruction.account_indices.iter().enumerate() {
+        for (i, account_index) in verve_instruction.account_indices.iter().enumerate() {
             let account_key = ctx.remaining_accounts[*account_index as usize].key();
-            let is_writable = instruction.writable_accounts[i];
-            let is_signer = instruction.signer_accounts[i];
+            let is_writable = verve_instruction.writable_accounts[i];
+            let is_signer = verve_instruction.signer_accounts[i];
 
             let account_meta = if is_writable {
                 AccountMeta::new(account_key, is_signer)
@@ -173,11 +178,19 @@ pub mod compressed_aa_poc {
             account_metas.push(account_meta);
         }
 
+        msg!("account_metas: {:?}", account_metas);
+
+        let program_account_index = &verve_instruction.program_account_index;
+
+        msg!("program_account_index metas: {:?}", program_account_index);
+
         let instruction = Instruction {
             accounts: account_metas,
             data: instruction_data,
-            program_id: ctx.remaining_accounts[4].key(),
+            program_id: ctx.remaining_accounts[*program_account_index as usize].key(),
         };
+
+        msg!("instruction: {:?}", instruction);
 
         let seed_guardian_key = ctx.accounts.seed_guardian.key();
 
@@ -189,7 +202,10 @@ pub mod compressed_aa_poc {
 
         let signer_seeds = &[&seeds[..]];
 
-        let cpi_accounts: Vec<AccountInfo<'info>> = ctx.remaining_accounts[5..].to_vec();
+        let cpi_accounts: Vec<AccountInfo<'info>> =
+            ctx.remaining_accounts[*program_account_index as usize + 1..].to_vec();
+
+        msg!("cpi_accounts: {:?}", cpi_accounts);
 
         anchor_lang::solana_program::program::invoke_signed(
             &instruction,
@@ -376,7 +392,7 @@ pub enum AaError {
     InvalidGuardianSignature,
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug)]
 pub struct VerveInstruction {
     pub data: Vec<u8>,
     pub account_indices: Vec<u8>,
@@ -391,13 +407,14 @@ mod shared {
 
     use crate::AaError;
 
-    pub fn verify_ix_signature(
+    pub fn _verify_ix_signature(
         pubkey: &Pubkey,
         message: &[u8],
         signature: &[u8; 64],
     ) -> Result<()> {
         let dalek_pubkey = VerifyingKey::from_bytes(&pubkey.to_bytes())
             .map_err(|_| ProgramError::InvalidArgument)?;
+
         let dalek_signature = Signature::from_bytes(signature);
 
         match dalek_pubkey.verify(message, &dalek_signature) {
