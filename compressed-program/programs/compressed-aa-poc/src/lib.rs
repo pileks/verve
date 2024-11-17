@@ -152,15 +152,15 @@ pub mod compressed_aa_poc {
             AaError::WalletMismatch
         );
 
-        msg!("instruction_data: {:?}", instruction_data);
+        msg!(
+            "Executing tx for AA wallet {}, approved by: {}",
+            ctx.accounts.wallet.key(),
+            ctx.accounts.guardian.key()
+        );
 
         // shared::verify_ix_signature(&ctx.accounts.guardian.key(), &instruction_data, &signature)?;
 
-        msg!("signature verified");
-
         let verve_instruction = VerveInstruction::try_from_slice(&instruction_data)?;
-
-        msg!("verve_instruction: {:?}", verve_instruction);
 
         let mut account_metas: Vec<AccountMeta> = vec![];
 
@@ -178,19 +178,13 @@ pub mod compressed_aa_poc {
             account_metas.push(account_meta);
         }
 
-        msg!("account_metas: {:?}", account_metas);
-
         let program_account_index = &verve_instruction.program_account_index;
-
-        msg!("program_account_index metas: {:?}", program_account_index);
 
         let instruction = Instruction {
             accounts: account_metas,
             data: verve_instruction.data,
             program_id: ctx.remaining_accounts[*program_account_index as usize].key(),
         };
-
-        msg!("instruction: {:?}", instruction);
 
         let seed_guardian_key = ctx.accounts.seed_guardian.key();
 
@@ -204,8 +198,6 @@ pub mod compressed_aa_poc {
 
         let cpi_accounts: Vec<AccountInfo<'info>> =
             ctx.remaining_accounts[*program_account_index as usize + 1..].to_vec();
-
-        msg!("cpi_accounts: {:?}", cpi_accounts);
 
         anchor_lang::solana_program::program::invoke_signed(
             &instruction,

@@ -492,15 +492,6 @@ export class CompressedAaPocProgram extends AaPocConstants {
       throw "message verification error, abandoning ix build...";
     }
 
-    console.log("is message valid: ", result);
-
-    console.log("instuction data: ", serializedInstructionData);
-
-    console.log(
-      "instuction data buffer: ",
-      Buffer.from(serializedInstructionData)
-    );
-
     const ix = await CompressedAaPocProgram.getInstance()
       .program.methods.execInstructionAlt(
         [walletGuardianAccount.data.data], // inputs
