@@ -433,6 +433,12 @@ export class CompressedAaPocProgram extends AaPocConstants {
       ),
     ];
 
+    const {
+      accounts: _accounts,
+      writables,
+      signers,
+    } = this.getAccountsWritablesSignersForInstruction(testIx);
+
     const remainingAccounts = [
       ...toAccountMetas(lightRemainingAccounts),
       ...testIxRemainingAccounts,
@@ -459,8 +465,8 @@ export class CompressedAaPocProgram extends AaPocConstants {
       accountIndices: Buffer.from(
         cpiAccounts.map((account) => remainingAccounts.indexOf(account))
       ),
-      writableAccounts: cpiAccounts.map((account) => account.isWritable),
-      signerAccounts: cpiAccounts.map((account) => account.isSigner),
+      writableAccounts: writables,
+      signerAccounts: signers,
       programAccountIndex: programAccountIndex,
     };
 

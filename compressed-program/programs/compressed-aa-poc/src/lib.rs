@@ -186,7 +186,7 @@ pub mod compressed_aa_poc {
 
         let instruction = Instruction {
             accounts: account_metas,
-            data: instruction_data,
+            data: verve_instruction.data,
             program_id: ctx.remaining_accounts[*program_account_index as usize].key(),
         };
 
