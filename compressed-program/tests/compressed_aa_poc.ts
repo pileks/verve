@@ -291,6 +291,68 @@ describe("initialize wallets and wallet guardians", () => {
 
     console.log("messages: ", log.meta.logMessages);
   });
+
+  it("execute test instruction by seed guardian for wallet 1 alt", async () => {
+    const testIx = await CompressedAaPocProgram.getInstance()
+      .program.methods.testTransaction()
+      .instruction();
+
+    const { transaction, walletGuardianAddress } =
+      await CompressedAaPocProgram.execInstructionAltTx(
+        rpc,
+        wallet.publicKey,
+        wallet.payer,
+        testIx,
+        [wallet.payer]
+      );
+
+    transaction.sign([wallet.payer]);
+
+    const signature = await sendAndConfirmTx(rpc, transaction, {
+      skipPreflight: true,
+      commitment: "confirmed",
+    });
+
+    const log = await rpc.getTransaction(signature, {
+      commitment: "confirmed",
+      maxSupportedTransactionVersion: 0,
+    });
+
+    console.log("signature: ", signature);
+
+    console.log("messages: ", log.meta.logMessages);
+  });
+
+  it("execute test instruction by wallet guardian for wallet 1 alt", async () => {
+    const testIx = await CompressedAaPocProgram.getInstance()
+      .program.methods.testTransaction()
+      .instruction();
+
+    const { transaction, walletGuardianAddress } =
+      await CompressedAaPocProgram.execInstructionAltTx(
+        rpc,
+        wallet.publicKey,
+        assignGuardian1,
+        testIx,
+        [wallet.payer, assignGuardian1]
+      );
+
+    transaction.sign([wallet.payer, assignGuardian1]);
+
+    const signature = await sendAndConfirmTx(rpc, transaction, {
+      skipPreflight: true,
+      commitment: "confirmed",
+    });
+
+    const log = await rpc.getTransaction(signature, {
+      commitment: "confirmed",
+      maxSupportedTransactionVersion: 0,
+    });
+
+    console.log("signature: ", signature);
+
+    console.log("messages: ", log.meta.logMessages);
+  });
 });
 
 describe("wallet sol transfer tests", () => {
