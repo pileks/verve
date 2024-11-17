@@ -433,11 +433,8 @@ export class CompressedAaPocProgram extends AaPocConstants {
       ),
     ];
 
-    const {
-      accounts: _accounts,
-      writables,
-      signers,
-    } = this.getAccountsWritablesSignersForInstruction(testIx);
+    const { writables, signers } =
+      this.getAccountsWritablesSignersForInstruction(testIx);
 
     const remainingAccounts = [
       ...toAccountMetas(lightRemainingAccounts),
@@ -508,16 +505,7 @@ export class CompressedAaPocProgram extends AaPocConstants {
         seedGuardian: seedGuardian,
         guardian: guardian.publicKey,
         wallet: wallet,
-        selfProgram: this.lightAccounts().selfProgram,
-        accountCompressionAuthority:
-          this.lightAccounts().accountCompressionAuthority,
-        accountCompressionProgram:
-          this.lightAccounts().accountCompressionProgram,
-        cpiSigner: this.lightAccounts().cpiSigner,
-        lightSystemProgram: this.lightAccounts().lightSystemProgram,
-        noopProgram: this.lightAccounts().noopProgram,
-        registeredProgramPda: this.lightAccounts().registeredProgramPda,
-        systemProgram: this.lightAccounts().systemProgram,
+        ...this.lightAccounts(),
       })
       .remainingAccounts(remainingAccounts)
       .signers(ixSigners)
