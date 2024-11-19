@@ -32,7 +32,6 @@ import {
   toAccountMetas,
 } from "@lightprotocol/stateless.js";
 import { Schema, serialize } from "borsh";
-import { sign } from "tweetnacl";
 
 export class CompressedAaPocProgram extends AaPocConstants {
   private static instance: CompressedAaPocProgram;
@@ -472,22 +471,22 @@ export class CompressedAaPocProgram extends AaPocConstants {
       verveInstruction
     );
 
-    // sign using guardian private key
-    const signature = sign.detached(
-      serializedInstructionData,
-      guardian.secretKey
-    );
+    // // sign using guardian private key
+    // const signature = sign.detached(
+    //   serializedInstructionData,
+    //   guardian.secretKey
+    // );
 
-    // verify using guardian public key
-    const result = sign.detached.verify(
-      serializedInstructionData,
-      signature,
-      guardian.publicKey.toBytes()
-    );
+    // // verify using guardian public key
+    // const result = sign.detached.verify(
+    //   serializedInstructionData,
+    //   signature,
+    //   guardian.publicKey.toBytes()
+    // );
 
-    if (!result) {
-      throw "message verification error, abandoning ix build...";
-    }
+    // if (!result) {
+    //   throw "message verification error, abandoning ix build...";
+    // }
 
     const ix = await CompressedAaPocProgram.getInstance()
       .program.methods.execInstructionAlt(
@@ -497,8 +496,7 @@ export class CompressedAaPocProgram extends AaPocConstants {
         rootIndex, // merkleTreeRootIndex
         addressMerkleContext, // addressMerkleContext
         addressMerkleTreeRootIndex, // addressMerkleTreeRootIndex
-        Buffer.from(serializedInstructionData), // instructionData
-        Array.from(signature) // signature
+        Buffer.from(serializedInstructionData) // instructionData
       )
       .accounts({
         payer: guardian.publicKey,

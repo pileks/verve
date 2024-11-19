@@ -18,7 +18,7 @@ const PDA_WALLET_GUARDIAN_SEED: &[u8; 2] = b"wg";
 #[program]
 pub mod compressed_aa_poc {
     use super::*;
-    use anchor_lang::solana_program::instruction::Instruction;
+    use anchor_lang::solana_program::{instruction::Instruction, program::invoke_signed};
 
     pub fn test_transaction<'info>(
         ctx: Context<'_, '_, '_, 'info, TestTransaction<'info>>,
@@ -92,10 +92,10 @@ pub mod compressed_aa_poc {
         let mut account_metas: Vec<AccountMeta> = vec![];
 
         for (i, account_key) in account_keys.iter().enumerate() {
-            let is_writable = is_writable_flags.get(i).cloned().unwrap_or(false);
-            let is_signer = is_signer_flags.get(i).cloned().unwrap_or(false);
+            let is_writable: bool = is_writable_flags.get(i).cloned().unwrap_or(false);
+            let is_signer: bool = is_signer_flags.get(i).cloned().unwrap_or(false);
 
-            let account_meta = if is_writable {
+            let account_meta: AccountMeta = if is_writable {
                 AccountMeta::new(*account_key, is_signer)
             } else {
                 AccountMeta::new_readonly(*account_key, is_signer)
@@ -110,23 +110,19 @@ pub mod compressed_aa_poc {
             program_id: ctx.remaining_accounts[4].key(),
         };
 
-        let seed_guardian_key = ctx.accounts.seed_guardian.key();
+        let seed_guardian_key: Pubkey = ctx.accounts.seed_guardian.key();
 
-        let seeds = [
+        let seeds: [&[u8]; 3] = [
             &PDA_WALLET_SEED[..],
             seed_guardian_key.as_ref(),
             &[ctx.bumps.wallet][..],
         ];
 
-        let signer_seeds = &[&seeds[..]];
+        let signer_seeds: &[&[&[u8]]; 1] = &[&seeds[..]];
 
         let cpi_accounts: Vec<AccountInfo<'info>> = ctx.remaining_accounts[5..].to_vec();
 
-        anchor_lang::solana_program::program::invoke_signed(
-            &instruction,
-            &cpi_accounts,
-            signer_seeds,
-        )?;
+        invoke_signed(&instruction, &cpi_accounts, signer_seeds)?;
 
         Ok(())
     }
@@ -134,7 +130,6 @@ pub mod compressed_aa_poc {
     pub fn exec_instruction_alt<'info>(
         ctx: LightContext<'_, '_, '_, 'info, ExecInstructionAlt<'info>>,
         instruction_data: Vec<u8>,
-        _signature: [u8; 64],
     ) -> Result<()> {
         require!(
             ctx.accounts
@@ -158,18 +153,17 @@ pub mod compressed_aa_poc {
             ctx.accounts.guardian.key()
         );
 
-        // shared::verify_ix_signature(&ctx.accounts.guardian.key(), &instruction_data, &signature)?;
-
-        let verve_instruction = VerveInstruction::try_from_slice(&instruction_data)?;
+        let verve_instruction: VerveInstruction =
+            VerveInstruction::try_from_slice(&instruction_data)?;
 
         let mut account_metas: Vec<AccountMeta> = vec![];
 
         for (i, account_index) in verve_instruction.account_indices.iter().enumerate() {
-            let account_key = ctx.remaining_accounts[*account_index as usize].key();
-            let is_writable = verve_instruction.writable_accounts[i];
-            let is_signer = verve_instruction.signer_accounts[i];
+            let account_key: Pubkey = ctx.remaining_accounts[*account_index as usize].key();
+            let is_writable: bool = verve_instruction.writable_accounts[i];
+            let is_signer: bool = verve_instruction.signer_accounts[i];
 
-            let account_meta = if is_writable {
+            let account_meta: AccountMeta = if is_writable {
                 AccountMeta::new(account_key, is_signer)
             } else {
                 AccountMeta::new_readonly(account_key, is_signer)
@@ -178,32 +172,28 @@ pub mod compressed_aa_poc {
             account_metas.push(account_meta);
         }
 
-        let program_account_index = &verve_instruction.program_account_index;
+        let program_account_index: &u8 = &verve_instruction.program_account_index;
 
-        let instruction = Instruction {
+        let instruction: Instruction = Instruction {
             accounts: account_metas,
             data: verve_instruction.data,
             program_id: ctx.remaining_accounts[*program_account_index as usize].key(),
         };
 
-        let seed_guardian_key = ctx.accounts.seed_guardian.key();
+        let seed_guardian_key: Pubkey = ctx.accounts.seed_guardian.key();
 
-        let seeds = [
+        let seeds: [&[u8]; 3] = [
             &PDA_WALLET_SEED[..],
             seed_guardian_key.as_ref(),
             &[ctx.bumps.wallet][..],
         ];
 
-        let signer_seeds = &[&seeds[..]];
+        let signer_seeds: &[&[&[u8]]; 1] = &[&seeds[..]];
 
         let cpi_accounts: Vec<AccountInfo<'info>> =
             ctx.remaining_accounts[*program_account_index as usize + 1..].to_vec();
 
-        anchor_lang::solana_program::program::invoke_signed(
-            &instruction,
-            &cpi_accounts,
-            signer_seeds,
-        )?;
+        invoke_signed(&instruction, &cpi_accounts, signer_seeds)?;
 
         Ok(())
     }
@@ -394,22 +384,52 @@ pub struct VerveInstruction {
 }
 
 mod shared {
-    use anchor_lang::prelude::*;
-    use ed25519_dalek::{Signature, Verifier, VerifyingKey};
-
     use crate::AaError;
+    use anchor_lang::prelude::*;
+    use anchor_lang::solana_program::{
+        ed25519_program, instruction::Instruction, program::invoke, sysvar::recent_blockhashes,
+    };
+    use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 
     pub fn _verify_ix_signature(
         pubkey: &Pubkey,
         message: &[u8],
         signature: &[u8; 64],
     ) -> Result<()> {
-        let dalek_pubkey = VerifyingKey::from_bytes(&pubkey.to_bytes())
+        let dalek_pubkey: VerifyingKey = VerifyingKey::from_bytes(&pubkey.to_bytes())
             .map_err(|_| ProgramError::InvalidArgument)?;
 
-        let dalek_signature = Signature::from_bytes(signature);
+        let dalek_signature: Signature = Signature::from_bytes(signature);
 
         match dalek_pubkey.verify(message, &dalek_signature) {
+            Ok(_) => Ok(()),
+            Err(_) => Err(error!(AaError::InvalidGuardianSignature)),
+        }
+    }
+
+    pub fn _verify_ix_signature_cpi(
+        pubkey: &Pubkey,
+        message: &[u8],
+        signature: &[u8; 64],
+        recent_blockhashes_account: &AccountInfo,
+    ) -> Result<()> {
+        let message_len: u32 = message.len() as u32;
+
+        // signature + pubkey + message length in le + length of the message itself
+        let mut instruction_data: Vec<u8> = Vec::with_capacity(64 + 32 + 4 + message.len());
+
+        instruction_data.extend_from_slice(signature);
+        instruction_data.extend_from_slice(&pubkey.to_bytes());
+        instruction_data.extend_from_slice(&message_len.to_le_bytes());
+        instruction_data.extend_from_slice(message);
+
+        let instruction: Instruction = Instruction {
+            program_id: ed25519_program::ID,
+            accounts: vec![AccountMeta::new_readonly(recent_blockhashes::ID, false)],
+            data: instruction_data,
+        };
+
+        match invoke(&instruction, &[recent_blockhashes_account.clone()]) {
             Ok(_) => Ok(()),
             Err(_) => Err(error!(AaError::InvalidGuardianSignature)),
         }
