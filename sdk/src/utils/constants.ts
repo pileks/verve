@@ -1,6 +1,8 @@
 import { PublicKey } from "@solana/web3.js";
 
-export const PROGRAM_ID: PublicKey = new PublicKey("");
+export const PROGRAM_ID: PublicKey = new PublicKey(
+  "Y3Fdm2T4ipYdaFBKxQb8M4QE8EgpxWAMa7c3q72vQhn",
+);
 
 export enum AaError {
   GuardianMismatch = "Guardian mismatch",
