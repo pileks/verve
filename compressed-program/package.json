@@ -1,7 +1,7 @@
 {
   "license": "ISC",
   "scripts": {
-    "build": "yarn copy-keypairs && anchor build",
+    "build": "yarn copy-keypairs && anchor build && bash ./copy_idls.sh",
     "test": "yarn light-start && yarn copy-keypairs && anchor test --skip-local-validator && yarn light-kill",
     "light-start": "light test-validator",
     "light-kill": "light test-validator --stop",
