@@ -18,5 +18,21 @@ export default [
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
   prettierConfig,
-  { rules: { "linebreak-style": ["error", "unix"] } },
+  {
+    rules: {
+      // enforce linebreak style and fix it automatically with lint:fix
+      "linebreak-style": ["error", "unix"],
+
+      // underscore to ignore unused vars
+      "no-unused-vars": "off",
+      "@typescript-eslint/no-unused-vars": [
+        "error", // or "error"
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
+    },
+  },
 ];
