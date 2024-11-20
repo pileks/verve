@@ -91,9 +91,7 @@ export class AaPocConstants {
 export enum AaError {
   GuardianMismatch = "Guardian mismatch",
   WalletMismatch = "Wallet mismatch",
-  InvalidToken = "Invalid token",
-  InvalidAlgorithm = "Invalid algorithm",
-  InvalidSignature = "Invalid signature",
+  InvalidGuardianSignature = "Invalid guardian signature",
 }
 
 export const PDA_WALLET_SEED: Uint8Array = Buffer.from("w");
