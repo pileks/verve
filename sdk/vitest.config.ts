@@ -9,6 +9,7 @@ export default defineConfig({
       all: true,
       provider: "istanbul",
       include: ["src/**/*.ts"],
+      exclude: ["src/idls/"],
       reportOnFailure: true,
     },
     silent: false,
