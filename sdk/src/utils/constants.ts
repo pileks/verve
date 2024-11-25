@@ -1,10 +1,10 @@
-import { PublicKey, SystemProgram } from "@solana/web3.js";
-import type { LightAccounts } from "./types";
 import {
   defaultStaticAccountsStruct,
   defaultTestStateTreeAccounts,
   LightSystemProgram,
 } from "@lightprotocol/stateless.js";
+import { PublicKey, SystemProgram } from "@solana/web3.js";
+import type { LightAccounts } from "./types";
 
 export const PROGRAM_ID: PublicKey = new PublicKey(
   "Y3Fdm2T4ipYdaFBKxQb8M4QE8EgpxWAMa7c3q72vQhn",
