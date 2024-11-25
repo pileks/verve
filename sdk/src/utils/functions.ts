@@ -1,4 +1,4 @@
-import { keccak_256 } from "@noble/hashes/sha3";
+import type { BN } from "@coral-xyz/anchor";
 import {
   bn,
   buildTx,
@@ -8,6 +8,7 @@ import {
   type CompressedProofWithContext,
   type NewAddressParams,
 } from "@lightprotocol/stateless.js";
+import { keccak_256 } from "@noble/hashes/sha3";
 import {
   ComputeBudgetProgram,
   type PublicKey,
@@ -15,8 +16,7 @@ import {
   type VersionedTransaction,
 } from "@solana/web3.js";
 import { PROGRAM_ID } from "./constants";
-import type { BN } from "@coral-xyz/anchor";
-import type { InstructionAccountMetadata } from "./types";
+import type { InstructionAccountMeta } from "./types";
 
 export function deriveSeed(seeds: Uint8Array[]): Uint8Array {
   const combinedSeeds: Uint8Array[] = [PROGRAM_ID.toBytes(), ...seeds];
@@ -100,9 +100,9 @@ export async function buildTxWithComputeBudget(
   return buildTx(instructions, payerPubkey, blockhash);
 }
 
-export function getInstructionAccountMetadata(
+export function getInstructionAccountMeta(
   testIx: TransactionInstruction,
-): InstructionAccountMetadata {
+): InstructionAccountMeta {
   const accounts: PublicKey[] = [];
   const writables: boolean[] = [];
   const signers: boolean[] = [];
