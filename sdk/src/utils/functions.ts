@@ -21,9 +21,7 @@ import type { InstructionAccountMeta } from "./types";
 export function deriveSeed(seeds: Uint8Array[]): Uint8Array {
   const combinedSeeds: Uint8Array[] = [PROGRAM_ID.toBytes(), ...seeds];
 
-  const hash = hashvToBn254FieldSizeBe(combinedSeeds);
-
-  return hash;
+  return hashvToBn254FieldSizeBe(combinedSeeds);
 }
 
 export function hashvToBn254FieldSizeBe(bytes: Uint8Array[]): Uint8Array {
