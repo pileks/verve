@@ -5,8 +5,8 @@ import {
   LightSystemProgram,
   NewAddressParams,
 } from "@lightprotocol/stateless.js";
-import { PublicKey, SystemProgram } from "@solana/web3.js";
 import { keccak_256 } from "@noble/hashes/sha3";
+import { PublicKey, SystemProgram } from "@solana/web3.js";
 
 export class AaPocConstants {
   static readonly programId: PublicKey = new PublicKey(

@@ -23,3 +23,9 @@ export interface LightAccounts {
   selfProgram: PublicKey;
   systemProgram: PublicKey;
 }
+
+export interface InstructionAccountMetadata {
+  accounts: PublicKey[];
+  writables: boolean[];
+  signers: boolean[];
+}

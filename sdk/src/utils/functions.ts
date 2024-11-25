@@ -1,12 +1,22 @@
-import type { PublicKey } from "@solana/web3.js";
 import { keccak_256 } from "@noble/hashes/sha3";
 import {
+  bn,
+  buildTx,
   LightSystemProgram,
+  Rpc,
   type CompressedAccount,
   type CompressedProofWithContext,
   type NewAddressParams,
 } from "@lightprotocol/stateless.js";
+import {
+  ComputeBudgetProgram,
+  type PublicKey,
+  type TransactionInstruction,
+  type VersionedTransaction,
+} from "@solana/web3.js";
 import { PROGRAM_ID } from "./constants";
+import type { BN } from "@coral-xyz/anchor";
+import type { InstructionAccountMetadata } from "./types";
 
 export function deriveSeed(seeds: Uint8Array[]): Uint8Array {
   const combinedSeeds: Uint8Array[] = [PROGRAM_ID.toBytes(), ...seeds];
@@ -72,4 +82,46 @@ export function getNewAddressParams(
   };
 
   return addressParams;
+}
+
+export async function buildTxWithComputeBudget(
+  rpc: Rpc,
+  instructions: TransactionInstruction[],
+  payerPubkey: PublicKey,
+): Promise<VersionedTransaction> {
+  const setComputeUnitIx = ComputeBudgetProgram.setComputeUnitLimit({
+    units: 2_000_000_000,
+  });
+
+  instructions.unshift(setComputeUnitIx);
+
+  const { blockhash } = await rpc.getLatestBlockhash();
+
+  return buildTx(instructions, payerPubkey, blockhash);
+}
+
+export function getInstructionAccountMetadata(
+  testIx: TransactionInstruction,
+): InstructionAccountMetadata {
+  const accounts: PublicKey[] = [];
+  const writables: boolean[] = [];
+  const signers: boolean[] = [];
+
+  for (const accountMeta of testIx.keys) {
+    accounts.push(accountMeta.pubkey);
+    writables.push(accountMeta.isWritable);
+    signers.push(accountMeta.isSigner);
+  }
+
+  return { accounts, writables, signers };
+}
+
+export async function getValidityProof(
+  rpc: Rpc,
+  inputHashes?: BN[],
+  newUniqueAddresses?: PublicKey[],
+): Promise<CompressedProofWithContext> {
+  const outputHashes = newUniqueAddresses?.map(addr => bn(addr.toBytes()));
+
+  return await rpc.getValidityProof(inputHashes, outputHashes);
 }
