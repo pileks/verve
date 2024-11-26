@@ -160,6 +160,31 @@ export class CompressedAaPocProgram extends AaPocConstants {
     return { transaction: tx, walletGuardianAddress };
   }
 
+  static async execMultipleInstructionsTx(
+    rpc: Rpc,
+    seedGuardian: PublicKey,
+    guardian: Keypair,
+    ixs: TransactionInstruction[],
+    signers: Array<Signer>
+  ) {
+    const { instruction, walletGuardianAddress } =
+      await this.execMultipleInstructionsIx(
+        rpc,
+        seedGuardian,
+        guardian,
+        ixs,
+        signers
+      );
+
+    const tx = await this.buildTxWithComputeBudget(
+      rpc,
+      [instruction],
+      seedGuardian
+    );
+
+    return { transaction: tx, walletGuardianAddress };
+  }
+
   private static async initWalletIx(rpc: Rpc, assignGuardian: PublicKey) {
     const wallet = this.deriveWalletAddress(assignGuardian);
 
@@ -497,6 +522,129 @@ export class CompressedAaPocProgram extends AaPocConstants {
         addressMerkleContext, // addressMerkleContext
         addressMerkleTreeRootIndex, // addressMerkleTreeRootIndex
         Buffer.from(serializedInstructionData) // instructionData
+      )
+      .accounts({
+        payer: guardian.publicKey,
+        seedGuardian: seedGuardian,
+        guardian: guardian.publicKey,
+        wallet: wallet,
+        ...this.lightAccounts(),
+      })
+      .remainingAccounts(remainingAccounts)
+      .signers(ixSigners)
+      .instruction();
+
+    return {
+      instruction: ix,
+      walletGuardianAddress,
+    };
+  }
+
+  private static async execMultipleInstructionsIx(
+    rpc: Rpc,
+    seedGuardian: PublicKey,
+    guardian: Keypair,
+    ixs: TransactionInstruction[],
+    ixSigners: Array<Signer>
+  ) {
+    const wallet = this.deriveWalletAddress(seedGuardian);
+
+    const walletGuardianSeed = this.deriveWalletGuardianSeed(
+      wallet,
+      guardian.publicKey
+    ); // address_seed
+
+    const walletGuardianAddress: PublicKey = deriveAddress(
+      walletGuardianSeed,
+      this.addressTree
+    );
+
+    const walletGuardianAccount = await rpc.getCompressedAccount(
+      new BN(walletGuardianAddress.toBytes())
+    );
+
+    const inputleafhashes = [bn(walletGuardianAccount.hash)];
+
+    const proof = await this.getValidityProof(rpc, inputleafhashes, undefined);
+
+    const {
+      addressMerkleContext,
+      addressMerkleTreeRootIndex,
+      merkleContext,
+      remainingAccounts: lightRemainingAccounts,
+      rootIndex,
+    } = this.packWithInput([walletGuardianAccount], [], [], proof);
+
+    const packedIxs: Buffer[] = [];
+    const remainingAccounts: AccountMeta[] = [
+      ...toAccountMetas(lightRemainingAccounts),
+    ];
+
+    for (const ix of ixs) {
+      const testIxRemainingAccounts = [
+        {
+          isSigner: false,
+          isWritable: false,
+          pubkey: ix.programId,
+        } as AccountMeta,
+        ...ix.keys.map(
+          (x) =>
+            <AccountMeta>{
+              isSigner: false,
+              isWritable: x.isWritable,
+              pubkey: x.pubkey,
+            }
+        ),
+      ];
+
+      const { writables, signers } =
+        this.getAccountsWritablesSignersForInstruction(ix);
+
+      remainingAccounts.push(...testIxRemainingAccounts);
+
+      const verveInstructionSchema = <Schema>{
+        struct: {
+          data: { array: { type: "u8" } },
+          accountIndices: { array: { type: "u8" } },
+          writableAccounts: { array: { type: "bool" } },
+          signerAccounts: { array: { type: "bool" } },
+          programAccountIndex: "u8",
+        },
+      };
+
+      const programAccountIndex = remainingAccounts.findIndex(
+        (x) => x.pubkey === ix.programId
+      );
+
+      const cpiAccounts = remainingAccounts.slice(programAccountIndex + 1);
+
+      const verveInstruction = <VerveInstruction>{
+        data: ix.data,
+        accountIndices: Buffer.from(
+          cpiAccounts.map((account) => remainingAccounts.indexOf(account))
+        ),
+        writableAccounts: writables,
+        signerAccounts: signers,
+        programAccountIndex: programAccountIndex,
+      };
+
+      const serializedInstructionData = serialize(
+        verveInstructionSchema,
+        verveInstruction
+      );
+
+      packedIxs.push(Buffer.from(serializedInstructionData));
+    }
+
+    const ix = await CompressedAaPocProgram.getInstance()
+      .program.methods.execMultipleInstructions(
+        [walletGuardianAccount.data.data], // inputs
+        proof.compressedProof, // proof
+        merkleContext, // merkleContext
+        rootIndex, // merkleTreeRootIndex
+        addressMerkleContext, // addressMerkleContext
+        addressMerkleTreeRootIndex, // addressMerkleTreeRootIndex
+        packedIxs // instructionData
       )
       .accounts({
         payer: guardian.publicKey,
