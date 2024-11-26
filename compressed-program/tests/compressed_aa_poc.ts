@@ -543,104 +543,6 @@ describe("wallet sol transfer tests", () => {
       transferAmount * LAMPORTS_PER_SOL
     );
   });
-
-  it("wallet 1 seed guardian transfer 2*2 sol from wallet 1 to wallet 2", async () => {
-    const transferAmount = 2;
-
-    const balanceBefore = await provider.connection.getBalance(walletPda1);
-
-    const transferSolIx1 = getTransferInstruction(
-      walletPda1,
-      walletPda2,
-      transferAmount
-    );
-
-    const transferSolIx2 = getTransferInstruction(
-      walletPda1,
-      walletPda2,
-      transferAmount
-    );
-
-    const { transaction, walletGuardianAddress } =
-      await CompressedAaPocProgram.execMultipleInstructionsTx(
-        rpc,
-        wallet.publicKey,
-        wallet.payer,
-        [transferSolIx1, transferSolIx2],
-        [wallet.payer]
-      );
-
-    transaction.sign([wallet.payer]);
-
-    const signature = await sendAndConfirmTx(rpc, transaction, {
-      skipPreflight: true,
-      commitment: "confirmed",
-    });
-
-    const log = await rpc.getTransaction(signature, {
-      commitment: "confirmed",
-      maxSupportedTransactionVersion: 0,
-    });
-
-    console.log("signature: ", signature);
-
-    console.log("messages: ", log.meta.logMessages);
-
-    const balanceAfter = await provider.connection.getBalance(walletPda1);
-
-    expect(balanceBefore - balanceAfter).to.eq(
-      2 * transferAmount * LAMPORTS_PER_SOL
-    );
-  });
-
-  it("wallet 1 assigned guardian transfer 2*2 sol from wallet 1 to wallet 2", async () => {
-    const transferAmount = 2;
-
-    const balanceBefore = await provider.connection.getBalance(walletPda1);
-
-    const transferSolIx1 = getTransferInstruction(
-      walletPda1,
-      walletPda2,
-      transferAmount
-    );
-
-    const transferSolIx2 = getTransferInstruction(
-      walletPda1,
-      walletPda2,
-      transferAmount
-    );
-
-    const { transaction, walletGuardianAddress } =
-      await CompressedAaPocProgram.execMultipleInstructionsTx(
-        rpc,
-        wallet.publicKey,
-        assignGuardian1,
-        [transferSolIx1, transferSolIx2],
-        [wallet.payer]
-      );
-
-    transaction.sign([wallet.payer, assignGuardian1]);
-
-    const signature = await sendAndConfirmTx(rpc, transaction, {
-      skipPreflight: true,
-      commitment: "confirmed",
-    });
-
-    const log = await rpc.getTransaction(signature, {
-      commitment: "confirmed",
-      maxSupportedTransactionVersion: 0,
-    });
-
-    console.log("signature: ", signature);
-
-    console.log("messages: ", log.meta.logMessages);
-
-    const balanceAfter = await provider.connection.getBalance(walletPda1);
-
-    expect(balanceBefore - balanceAfter).to.eq(
-      2 * transferAmount * LAMPORTS_PER_SOL
-    );
-  });
 });
 
 describe("spl token transfer tests", () => {
@@ -891,6 +793,106 @@ describe("spl token transfer tests", () => {
 
     expect(wallet1AtaBefore.amount - wallet1AtaAfter.amount).to.eq(
       BigInt(transferAmount)
+    );
+  });
+});
+
+describe("multiple instruction tests", () => {
+  it("wallet 1 seed guardian transfer 2*2 sol from wallet 1 to wallet 2", async () => {
+    const transferAmount = 2;
+
+    const balanceBefore = await provider.connection.getBalance(walletPda1);
+
+    const transferSolIx1 = getTransferInstruction(
+      walletPda1,
+      walletPda2,
+      transferAmount
+    );
+
+    const transferSolIx2 = getTransferInstruction(
+      walletPda1,
+      walletPda2,
+      transferAmount
+    );
+
+    const { transaction, walletGuardianAddress } =
+      await CompressedAaPocProgram.execMultipleInstructionsTx(
+        rpc,
+        wallet.publicKey,
+        wallet.payer,
+        [transferSolIx1, transferSolIx2],
+        [wallet.payer]
+      );
+
+    transaction.sign([wallet.payer]);
+
+    const signature = await sendAndConfirmTx(rpc, transaction, {
+      skipPreflight: true,
+      commitment: "confirmed",
+    });
+
+    const log = await rpc.getTransaction(signature, {
+      commitment: "confirmed",
+      maxSupportedTransactionVersion: 0,
+    });
+
+    console.log("signature: ", signature);
+
+    console.log("messages: ", log.meta.logMessages);
+
+    const balanceAfter = await provider.connection.getBalance(walletPda1);
+
+    expect(balanceBefore - balanceAfter).to.eq(
+      2 * transferAmount * LAMPORTS_PER_SOL
+    );
+  });
+
+  it("wallet 1 assigned guardian transfer 2*2 sol from wallet 1 to wallet 2", async () => {
+    const transferAmount = 2;
+
+    const balanceBefore = await provider.connection.getBalance(walletPda1);
+
+    const transferSolIx1 = getTransferInstruction(
+      walletPda1,
+      walletPda2,
+      transferAmount
+    );
+
+    const transferSolIx2 = getTransferInstruction(
+      walletPda1,
+      walletPda2,
+      transferAmount
+    );
+
+    const { transaction, walletGuardianAddress } =
+      await CompressedAaPocProgram.execMultipleInstructionsTx(
+        rpc,
+        wallet.publicKey,
+        assignGuardian1,
+        [transferSolIx1, transferSolIx2],
+        [wallet.payer]
+      );
+
+    transaction.sign([wallet.payer, assignGuardian1]);
+
+    const signature = await sendAndConfirmTx(rpc, transaction, {
+      skipPreflight: true,
+      commitment: "confirmed",
+    });
+
+    const log = await rpc.getTransaction(signature, {
+      commitment: "confirmed",
+      maxSupportedTransactionVersion: 0,
+    });
+
+    console.log("signature: ", signature);
+
+    console.log("messages: ", log.meta.logMessages);
+
+    const balanceAfter = await provider.connection.getBalance(walletPda1);
+
+    expect(balanceBefore - balanceAfter).to.eq(
+      2 * transferAmount * LAMPORTS_PER_SOL
     );
   });
 });

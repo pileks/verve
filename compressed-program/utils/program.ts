@@ -479,12 +479,14 @@ export class CompressedAaPocProgram extends AaPocConstants {
       (x) => x.pubkey === testIx.programId
     );
 
-    const cpiAccounts = remainingAccounts.slice(programAccountIndex + 1);
-
     const verveInstruction: VerveInstruction = {
       data: testIx.data,
       accountIndices: Buffer.from(
-        cpiAccounts.map((account) => remainingAccounts.indexOf(account))
+        testIx.keys.map((ixKey) =>
+          remainingAccounts.findIndex(
+            (remainingAccount) => remainingAccount.pubkey === ixKey.pubkey
+          )
+        )
       ),
       writableAccounts: writables,
       signerAccounts: signers,
