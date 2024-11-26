@@ -357,12 +357,12 @@ export class CompressedAaPocProgram extends AaPocConstants {
     const { accounts, writables, signers } =
       this.getAccountsWritablesSignersForInstruction(testIx);
 
-    const testIxRemainingAccounts = [
-      {
+    const ixRemainingAccounts = [
+      <AccountMeta>{
         isSigner: false,
         isWritable: false,
         pubkey: testIx.programId,
-      } as AccountMeta,
+      },
       ...testIx.keys.map(
         (x) =>
           <AccountMeta>{
@@ -395,7 +395,7 @@ export class CompressedAaPocProgram extends AaPocConstants {
       })
       .remainingAccounts([
         ...toAccountMetas(remainingAccounts),
-        ...testIxRemainingAccounts,
+        ...ixRemainingAccounts,
       ])
       .signers(ixSigners)
       .instruction();
@@ -441,12 +441,12 @@ export class CompressedAaPocProgram extends AaPocConstants {
       rootIndex,
     } = this.packWithInput([walletGuardianAccount], [], [], proof);
 
-    const testIxRemainingAccounts = [
-      {
+    const ixRemainingAccounts = [
+      <AccountMeta>{
         isSigner: false,
         isWritable: false,
         pubkey: testIx.programId,
-      } as AccountMeta,
+      },
       ...testIx.keys.map(
         (x) =>
           <AccountMeta>{
@@ -462,10 +462,10 @@ export class CompressedAaPocProgram extends AaPocConstants {
 
     const remainingAccounts = [
       ...toAccountMetas(lightRemainingAccounts),
-      ...testIxRemainingAccounts,
+      ...ixRemainingAccounts,
     ];
 
-    const verveInstructionSchema = <Schema>{
+    const verveInstructionSchema: Schema = {
       struct: {
         data: { array: { type: "u8" } },
         accountIndices: { array: { type: "u8" } },
@@ -481,7 +481,7 @@ export class CompressedAaPocProgram extends AaPocConstants {
 
     const cpiAccounts = remainingAccounts.slice(programAccountIndex + 1);
 
-    const verveInstruction = <VerveInstruction>{
+    const verveInstruction: VerveInstruction = {
       data: testIx.data,
       accountIndices: Buffer.from(
         cpiAccounts.map((account) => remainingAccounts.indexOf(account))
@@ -576,17 +576,18 @@ export class CompressedAaPocProgram extends AaPocConstants {
     } = this.packWithInput([walletGuardianAccount], [], [], proof);
 
     const packedIxs: Buffer[] = [];
+
     const remainingAccounts: AccountMeta[] = [
       ...toAccountMetas(lightRemainingAccounts),
     ];
 
     for (const ix of ixs) {
-      const testIxRemainingAccounts = [
-        {
+      const ixRemainingAccounts = [
+        <AccountMeta>{
           isSigner: false,
           isWritable: false,
           pubkey: ix.programId,
-        } as AccountMeta,
+        },
         ...ix.keys.map(
           (x) =>
             <AccountMeta>{
@@ -600,9 +601,17 @@ export class CompressedAaPocProgram extends AaPocConstants {
       const { writables, signers } =
         this.getAccountsWritablesSignersForInstruction(ix);
 
-      remainingAccounts.push(...testIxRemainingAccounts);
+      for (const ixAccount of ixRemainingAccounts) {
+        const i = remainingAccounts.findIndex(
+          (x) => x.pubkey === ixAccount.pubkey
+        );
 
-      const verveInstructionSchema = <Schema>{
+        if (i === -1) {
+          remainingAccounts.push(ixAccount);
+        }
+      }
+
+      const verveInstructionSchema: Schema = {
         struct: {
           data: { array: { type: "u8" } },
           accountIndices: { array: { type: "u8" } },
@@ -616,12 +625,14 @@ export class CompressedAaPocProgram extends AaPocConstants {
         (x) => x.pubkey === ix.programId
       );
 
-      const cpiAccounts = remainingAccounts.slice(programAccountIndex + 1);
-
-      const verveInstruction = <VerveInstruction>{
+      const verveInstruction: VerveInstruction = {
         data: ix.data,
         accountIndices: Buffer.from(
-          cpiAccounts.map((account) => remainingAccounts.indexOf(account))
+          ix.keys.map((ixKey) =>
+            remainingAccounts.findIndex(
+              (remainingAccount) => remainingAccount.pubkey === ixKey.pubkey
+            )
+          )
         ),
         writableAccounts: writables,
         signerAccounts: signers,
