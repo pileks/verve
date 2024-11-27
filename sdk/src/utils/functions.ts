@@ -1,27 +1,50 @@
-import type { BN } from "@coral-xyz/anchor";
+import { BN } from "@coral-xyz/anchor";
 import {
   bn,
   buildTx,
   LightSystemProgram,
   Rpc,
   type CompressedAccount,
+  type CompressedAccountWithMerkleContext,
   type CompressedProofWithContext,
   type NewAddressParams,
 } from "@lightprotocol/stateless.js";
 import { keccak_256 } from "@noble/hashes/sha3";
 import {
   ComputeBudgetProgram,
-  type PublicKey,
+  PublicKey,
   type TransactionInstruction,
   type VersionedTransaction,
 } from "@solana/web3.js";
-import { PROGRAM_ID } from "./constants";
+import {
+  PDA_WALLET_GUARDIAN_SEED,
+  PDA_WALLET_SEED,
+  PROGRAM_ID,
+} from "./constants";
 import type { InstructionAccountMeta } from "./types";
 
 export function deriveSeed(seeds: Uint8Array[]): Uint8Array {
   const combinedSeeds: Uint8Array[] = [PROGRAM_ID.toBytes(), ...seeds];
 
   return hashvToBn254FieldSizeBe(combinedSeeds);
+}
+
+export function deriveWalletAddress(seedGuardian: PublicKey): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [PDA_WALLET_SEED, seedGuardian.toBytes()],
+    PROGRAM_ID,
+  )[0];
+}
+
+export function deriveWalletGuardianSeed(
+  wallet: PublicKey,
+  guardian: PublicKey,
+): Uint8Array {
+  return deriveSeed([
+    PDA_WALLET_GUARDIAN_SEED,
+    wallet.toBytes(),
+    guardian.toBytes(),
+  ]);
 }
 
 export function hashvToBn254FieldSizeBe(bytes: Uint8Array[]): Uint8Array {
@@ -117,9 +140,24 @@ export function getInstructionAccountMeta(
 export async function getValidityProof(
   rpc: Rpc,
   inputHashes?: BN[],
-  newUniqueAddresses?: PublicKey[],
+  newUniqueAddresses: PublicKey[] | undefined = undefined,
 ): Promise<CompressedProofWithContext> {
   const outputHashes = newUniqueAddresses?.map(addr => bn(addr.toBytes()));
 
   return await rpc.getValidityProof(inputHashes, outputHashes);
+}
+
+export async function getWalletGuardianAccount(
+  rpc: Rpc,
+  walletGuardianAccountAddress: PublicKey,
+): Promise<CompressedAccountWithMerkleContext> {
+  const walletGuardianAccount = await rpc.getCompressedAccount(
+    new BN(walletGuardianAccountAddress),
+  );
+
+  if (!walletGuardianAccount) {
+    throw "Wallet guardian account does not exist";
+  }
+
+  return walletGuardianAccount;
 }
